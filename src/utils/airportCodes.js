@@ -3,5 +3,6 @@ import { clean } from "./normalizers.js";
 
 export function canonicalAirportCode(value) {
   const code = clean(value).toUpperCase();
-  return AIRPORT_ALIASES[code] || code;
+  const asciiCode = code.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+  return AIRPORT_ALIASES[code] || AIRPORT_ALIASES[asciiCode] || code;
 }
