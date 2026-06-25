@@ -9,12 +9,14 @@
     "setup": "bash scripts/setup-rpi.sh",
     "db:init": "node src/scripts/init-db.js",
     "db:normalize": "node src/scripts/normalize-existing-data.js",
+    "excel:import": "node src/scripts/import-excel-data.js",
     "test:parsers": "node test/parsers.test.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0",
     "express": "^4.21.2",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {}
 }
