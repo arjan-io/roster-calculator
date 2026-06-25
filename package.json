@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "setup": "bash scripts/setup-rpi.sh",
     "db:init": "node src/scripts/init-db.js",
+    "db:normalize": "node src/scripts/normalize-existing-data.js",
     "test:parsers": "node test/parsers.test.js"
   },
   "dependencies": {
