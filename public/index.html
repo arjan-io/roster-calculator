@@ -11,6 +11,7 @@
       <h1>Roster Calculator</h1>
       <nav>
         <button class="active" type="button">Import</button>
+        <button type="button">Airports</button>
         <button type="button">Payment</button>
         <button type="button">Statistics</button>
       </nav>
@@ -81,6 +82,32 @@
               </tr>
             </thead>
             <tbody id="flights-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-heading">
+          <h2>Airports</h2>
+          <p id="airport-status">Add coordinates in Lido format.</p>
+        </div>
+        <form id="airport-form" class="airport-form">
+          <input name="code" placeholder="AMS" maxlength="4" required>
+          <input name="name" placeholder="Amsterdam Schiphol">
+          <input name="lidoCoordinate" placeholder="N 52 18.5 E 004 45.9" required>
+          <button type="submit">Save Airport</button>
+        </form>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+              </tr>
+            </thead>
+            <tbody id="airports-body"></tbody>
           </table>
         </div>
       </section>
