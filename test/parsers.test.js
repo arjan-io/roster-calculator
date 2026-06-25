@@ -41,5 +41,7 @@ assert.equal(filtered.skippedBeforeCutoff, 1);
 assert.equal(canonicalAirportCode("AMS"), "EHAM");
 assert.equal(canonicalAirportCode("EHAM"), "EHAM");
 assert.equal(canonicalAirportCode("CHQ"), "LGSA");
+assert.equal(canonicalAirportCode("Berlin-Schönefeld Airport (Closed)"), "SXF");
+assert.equal(canonicalAirportCode("Berlin-Schonefeld Airport (Closed)"), "SXF");
 
 console.log("Parser tests passed.");
