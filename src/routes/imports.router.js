@@ -22,6 +22,7 @@ router.post("/preview", upload.single("rosterFile"), (req, res, next) => {
       sourceFormat: parsed.sourceFormat,
       originalFileName: req.file.originalname,
       rowCount: parsed.flights.length,
+      skippedBeforeCutoff: parsed.skippedBeforeCutoff,
       flights: previewImport(parsed.flights)
     });
   } catch (error) {
