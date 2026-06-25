@@ -10,38 +10,38 @@
     <header class="app-header">
       <h1>Roster Calculator</h1>
       <nav>
-        <button class="active" type="button">Import</button>
-        <button type="button">Airports</button>
-        <button type="button">Payment</button>
-        <button type="button">Statistics</button>
+        <button class="active" type="button" data-view-button="import">Import</button>
+        <button type="button" data-view-button="airports">Airports</button>
+        <button type="button" data-view-button="payment">Payment</button>
+        <button type="button" data-view-button="statistics">Statistics</button>
       </nav>
     </header>
 
     <main>
-      <section class="toolbar">
-        <form id="import-form">
-          <input id="roster-file" name="rosterFile" type="file" accept=".csv,text/csv">
-          <button type="submit">Preview Import</button>
-        </form>
-        <button id="commit-button" type="button" disabled>Commit Import</button>
-      </section>
+      <section class="view active" data-view="import">
+        <div class="toolbar">
+          <form id="import-form">
+            <input id="roster-file" name="rosterFile" type="file" accept=".csv,text/csv">
+            <button type="submit">Preview Import</button>
+          </form>
+          <button id="commit-button" type="button" disabled>Commit Import</button>
+        </div>
 
-      <section class="summary-grid">
-        <div>
-          <span>Total flights</span>
-          <strong id="total-flights">0</strong>
-        </div>
-        <div>
-          <span>Date range</span>
-          <strong id="date-range">-</strong>
-        </div>
-        <div>
-          <span>Total time</span>
-          <strong id="total-time">0:00</strong>
-        </div>
-      </section>
+        <section class="summary-grid">
+          <div>
+            <span>Total flights</span>
+            <strong id="total-flights">0</strong>
+          </div>
+          <div>
+            <span>Date range</span>
+            <strong id="date-range">-</strong>
+          </div>
+          <div>
+            <span>Total time</span>
+            <strong id="total-time">0:00</strong>
+          </div>
+        </section>
 
-      <section>
         <div class="section-heading">
           <h2>Import Preview</h2>
           <p id="preview-status">No file selected.</p>
@@ -62,9 +62,7 @@
             <tbody id="preview-body"></tbody>
           </table>
         </div>
-      </section>
 
-      <section>
         <div class="section-heading">
           <h2>Recent Flights</h2>
         </div>
@@ -86,7 +84,7 @@
         </div>
       </section>
 
-      <section>
+      <section class="view" data-view="airports">
         <div class="section-heading">
           <h2>Airports</h2>
           <p id="airport-status">Add coordinates in Lido format.</p>
@@ -109,6 +107,20 @@
             </thead>
             <tbody id="airports-body"></tbody>
           </table>
+        </div>
+      </section>
+
+      <section class="view" data-view="payment">
+        <div class="empty-view">
+          <h2>Payment</h2>
+          <p>Payment inputs and monthly calculations will be built here next.</p>
+        </div>
+      </section>
+
+      <section class="view" data-view="statistics">
+        <div class="empty-view">
+          <h2>Statistics</h2>
+          <p>Route, sector, and hours statistics will be built here after distances are available.</p>
         </div>
       </section>
     </main>
