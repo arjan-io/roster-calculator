@@ -86,8 +86,19 @@ const findOperationalCandidates = db.prepare(`
 `);
 
 export function previewImport(flights) {
+  const seenFingerprints = new Set();
+  const seenOperationalKeys = new Set();
+
   return flights.map((flight) => {
-    const existing = findDuplicateFlight(flight);
+    const operationalKey = getOperationalDuplicateKey(flight);
+    const duplicateInImport =
+      seenFingerprints.has(flight.sourceFingerprint) ||
+      seenOperationalKeys.has(operationalKey);
+    const existing = duplicateInImport ? { id: null } : findDuplicateFlight(flight);
+
+    seenFingerprints.add(flight.sourceFingerprint);
+    seenOperationalKeys.add(operationalKey);
+
     return {
       ...flight,
       duplicate: Boolean(existing),
@@ -186,4 +197,15 @@ function findDuplicateFlight(flight) {
 
     return sameRoute && sameTiming;
   });
+}
+
+function getOperationalDuplicateKey(flight) {
+  return [
+    flight.flightDate,
+    flight.aircraftRegistration,
+    canonicalAirportCode(flight.departureAirport),
+    flight.departureTime,
+    canonicalAirportCode(flight.arrivalAirport),
+    flight.arrivalTime
+  ].join("|");
 }
