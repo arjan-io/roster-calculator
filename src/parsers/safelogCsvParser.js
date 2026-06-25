@@ -8,6 +8,7 @@ import {
   splitTimeAndZone
 } from "../utils/normalizers.js";
 import { canonicalAirportCode } from "../utils/airportCodes.js";
+import { normalizeAircraftModel } from "../utils/aircraft.js";
 
 export function canParseSafeLogCsv(text) {
   return text.includes("Aircraft Type;Aircraft Registration") && text.includes("Departure Time;Arrival");
@@ -35,7 +36,7 @@ function normalizeSafeLogRecord(record, sourceRowNumber, fileName) {
     arrivalAirport: canonicalAirportCode(record.Arrival),
     arrivalTime: arrival.time,
     arrivalTimeZone: arrival.zone,
-    aircraftType: clean(record["Aircraft Type"]),
+    aircraftType: normalizeAircraftModel(record["Aircraft Type"]),
     aircraftRegistration: clean(record["Aircraft Registration"]).toUpperCase(),
     flightTimeMinutes: durationToMinutes(record["Total Flight Time"]),
     picName: clean(record["Name of PIC"]),
