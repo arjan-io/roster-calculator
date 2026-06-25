@@ -1,5 +1,6 @@
 import { db, transaction } from "../db/connection.js";
 import { isImportableFlightDate } from "../config/importRules.js";
+import { canonicalAirportCode } from "../utils/airportCodes.js";
 
 const insertBatch = db.prepare(`
   INSERT INTO import_batches (
@@ -70,15 +71,34 @@ const findFlightByFingerprint = db.prepare(`
   WHERE source_fingerprint = ?
 `);
 
+const findOperationalCandidates = db.prepare(`
+  SELECT
+    id,
+    display_code AS displayCode,
+    departure_airport AS departureAirport,
+    departure_time AS departureTime,
+    arrival_airport AS arrivalAirport,
+    arrival_time AS arrivalTime,
+    flight_time_minutes AS flightTimeMinutes
+  FROM flights
+  WHERE flight_date = @flightDate
+    AND aircraft_registration = @aircraftRegistration
+`);
+
 export function previewImport(flights) {
   return flights.map((flight) => {
-    const existing = findFlightByFingerprint.get(flight.sourceFingerprint);
+    const existing = findDuplicateFlight(flight);
     return {
       ...flight,
       duplicate: Boolean(existing),
       existingFlightId: existing?.id || null
     };
   });
+}
+
+export function toPublicPreviewFlight(flight) {
+  const { raw, sourceFingerprint, ...publicFlight } = flight;
+  return publicFlight;
 }
 
 export const commitImport = transaction(({ sourceFormat, originalFileName, flights }) => {
@@ -139,4 +159,31 @@ export function listImportBatches() {
     FROM import_batches
     ORDER BY imported_at DESC, id DESC
   `).all();
+}
+
+function findDuplicateFlight(flight) {
+  const fingerprintMatch = findFlightByFingerprint.get(flight.sourceFingerprint);
+  if (fingerprintMatch) {
+    return fingerprintMatch;
+  }
+
+  const candidates = findOperationalCandidates.all({
+    flightDate: flight.flightDate,
+    aircraftRegistration: flight.aircraftRegistration
+  });
+
+  const departure = canonicalAirportCode(flight.departureAirport);
+  const arrival = canonicalAirportCode(flight.arrivalAirport);
+
+  return candidates.find((candidate) => {
+    const sameRoute =
+      canonicalAirportCode(candidate.departureAirport) === departure &&
+      canonicalAirportCode(candidate.arrivalAirport) === arrival;
+    const sameTiming =
+      candidate.departureTime === flight.departureTime ||
+      candidate.arrivalTime === flight.arrivalTime ||
+      candidate.flightTimeMinutes === flight.flightTimeMinutes;
+
+    return sameRoute && sameTiming;
+  });
 }
