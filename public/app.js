@@ -41,9 +41,7 @@ commitButton.addEventListener("click", async () => {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      sourceFormat: pendingImport.sourceFormat,
-      originalFileName: pendingImport.originalFileName,
-      flights: pendingImport.flights
+      previewToken: pendingImport.previewToken
     })
   });
   const result = await response.json();
