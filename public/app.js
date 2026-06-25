@@ -1,0 +1,124 @@
+let pendingImport = null;
+
+const importForm = document.querySelector("#import-form");
+const commitButton = document.querySelector("#commit-button");
+const previewStatus = document.querySelector("#preview-status");
+const previewBody = document.querySelector("#preview-body");
+const flightsBody = document.querySelector("#flights-body");
+
+importForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const formData = new FormData(importForm);
+  previewStatus.textContent = "Reading file...";
+  commitButton.disabled = true;
+
+  const response = await fetch("/api/imports/preview", {
+    method: "POST",
+    body: formData
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    previewStatus.textContent = result.error || "Could not read file.";
+    pendingImport = null;
+    renderPreview([]);
+    return;
+  }
+
+  pendingImport = result;
+  const duplicateCount = result.flights.filter((flight) => flight.duplicate).length;
+  previewStatus.textContent = `${result.rowCount} rows found, ${duplicateCount} duplicates.`;
+  commitButton.disabled = result.flights.length === 0;
+  renderPreview(result.flights);
+});
+
+commitButton.addEventListener("click", async () => {
+  if (!pendingImport) {
+    return;
+  }
+
+  const response = await fetch("/api/imports/commit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sourceFormat: pendingImport.sourceFormat,
+      originalFileName: pendingImport.originalFileName,
+      flights: pendingImport.flights
+    })
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    previewStatus.textContent = result.error || "Import failed.";
+    return;
+  }
+
+  previewStatus.textContent = `${result.insertedCount} inserted, ${result.duplicateCount} skipped.`;
+  commitButton.disabled = true;
+  pendingImport = null;
+  await loadDashboard();
+});
+
+function renderPreview(flights) {
+  previewBody.innerHTML = "";
+  for (const flight of flights.slice(0, 100)) {
+    previewBody.append(row([
+      flight.flightDate,
+      flight.flightNumber || "-",
+      `${flight.departureAirport} -> ${flight.arrivalAirport}`,
+      `${flight.departureTime || "-"} - ${flight.arrivalTime || "-"}`,
+      [flight.aircraftType, flight.aircraftRegistration].filter(Boolean).join(" "),
+      flight.duplicate ? "Duplicate" : "New"
+    ], flight.duplicate));
+  }
+}
+
+async function loadDashboard() {
+  const [summaryResponse, flightsResponse] = await Promise.all([
+    fetch("/api/flights/summary"),
+    fetch("/api/flights?limit=50")
+  ]);
+
+  const summary = await summaryResponse.json();
+  const flights = await flightsResponse.json();
+
+  document.querySelector("#total-flights").textContent = summary.totalFlights || 0;
+  document.querySelector("#date-range").textContent =
+    summary.firstDate && summary.lastDate ? `${summary.firstDate} - ${summary.lastDate}` : "-";
+  document.querySelector("#total-time").textContent = minutesToDuration(summary.totalMinutes || 0);
+
+  flightsBody.innerHTML = "";
+  for (const flight of flights) {
+    flightsBody.append(row([
+      flight.flightDate,
+      flight.flightNumber || "-",
+      `${flight.departureAirport} -> ${flight.arrivalAirport}`,
+      `${flight.departureTime || "-"} - ${flight.arrivalTime || "-"}`,
+      [flight.aircraftType, flight.aircraftRegistration].filter(Boolean).join(" "),
+      flight.sourceFormat
+    ]));
+  }
+}
+
+function row(values, duplicate = false) {
+  const tr = document.createElement("tr");
+  if (duplicate) {
+    tr.classList.add("duplicate");
+  }
+
+  for (const value of values) {
+    const td = document.createElement("td");
+    td.textContent = value || "";
+    tr.append(td);
+  }
+
+  return tr;
+}
+
+function minutesToDuration(minutes) {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours}:${String(mins).padStart(2, "0")}`;
+}
+
+loadDashboard();
