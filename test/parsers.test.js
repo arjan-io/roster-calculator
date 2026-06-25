@@ -4,6 +4,7 @@ import { parseSafeLogCsv } from "../src/parsers/safelogCsvParser.js";
 import { parseRosterFile } from "../src/services/parser.service.js";
 import { canonicalAirportCode } from "../src/utils/airportCodes.js";
 import { normalizeAircraftModel } from "../src/utils/aircraft.js";
+import { greatCircleDistanceNm, parseLidoCoordinate } from "../src/utils/geo.js";
 
 const airline = `Date,Flight,DepPlace,DepTime,ArrPlace,ArrTime,ACType,Reg,FltTime,PicName,TKoffsDay,TKoffsNight,LandsDay,LandsNight,PIC,CoPlt,Instr,SimTime,SimType
 01/05/26,7921,AMS,11:52,CHQ,15:12,319,OE-LKM,03:20,HES ARJAN,,,,,03:20,,,,
@@ -48,5 +49,12 @@ assert.equal(canonicalAirportCode("Berlin-Schönefeld Airport (Closed)"), "SXF")
 assert.equal(canonicalAirportCode("Berlin-Schonefeld Airport (Closed)"), "SXF");
 assert.equal(normalizeAircraftModel("319"), "A319");
 assert.equal(normalizeAircraftModel("A320neo"), "A320NEO");
+
+const ams = parseLidoCoordinate("N 52 18.5 E 004 45.9");
+assert.equal(Number(ams.latitude.toFixed(6)), 52.308333);
+assert.equal(Number(ams.longitude.toFixed(6)), 4.765);
+
+const sameAirportDistance = greatCircleDistanceNm(ams, ams);
+assert.equal(Math.round(sameAirportDistance), 0);
 
 console.log("Parser tests passed.");
