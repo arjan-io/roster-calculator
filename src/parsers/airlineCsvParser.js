@@ -4,10 +4,10 @@ import {
   clean,
   durationToMinutes,
   fingerprint,
-  normalizeAirport,
   parseDate,
   splitTimeAndZone
 } from "../utils/normalizers.js";
+import { canonicalAirportCode } from "../utils/airportCodes.js";
 
 export function canParseAirlineCsv(text) {
   return text.includes("DepPlace") && text.includes("ArrPlace") && text.includes("FltTime");
@@ -29,10 +29,10 @@ function normalizeAirlineRecord(record, sourceRowNumber, fileName) {
   const flight = {
     flightDate: parseDate(record.Date),
     flightNumber: clean(record.Flight),
-    departureAirport: normalizeAirport(record.DepPlace),
+    departureAirport: canonicalAirportCode(record.DepPlace),
     departureTime: departure.time,
     departureTimeZone: departure.zone,
-    arrivalAirport: normalizeAirport(record.ArrPlace),
+    arrivalAirport: canonicalAirportCode(record.ArrPlace),
     arrivalTime: arrival.time,
     arrivalTimeZone: arrival.zone,
     aircraftType: clean(record.ACType),
