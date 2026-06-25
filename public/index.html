@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Roster Calculator</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <h1>Roster Calculator</h1>
+      <nav>
+        <button class="active" type="button">Import</button>
+        <button type="button">Payment</button>
+        <button type="button">Statistics</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="toolbar">
+        <form id="import-form">
+          <input id="roster-file" name="rosterFile" type="file" accept=".csv,text/csv">
+          <button type="submit">Preview Import</button>
+        </form>
+        <button id="commit-button" type="button" disabled>Commit Import</button>
+      </section>
+
+      <section class="summary-grid">
+        <div>
+          <span>Total flights</span>
+          <strong id="total-flights">0</strong>
+        </div>
+        <div>
+          <span>Date range</span>
+          <strong id="date-range">-</strong>
+        </div>
+        <div>
+          <span>Total time</span>
+          <strong id="total-time">0:00</strong>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-heading">
+          <h2>Import Preview</h2>
+          <p id="preview-status">No file selected.</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Flight</th>
+                <th>Route</th>
+                <th>Times</th>
+                <th>Aircraft</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="preview-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-heading">
+          <h2>Recent Flights</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Flight</th>
+                <th>Route</th>
+                <th>Times</th>
+                <th>Aircraft</th>
+                <th>Source</th>
+              </tr>
+            </thead>
+            <tbody id="flights-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
