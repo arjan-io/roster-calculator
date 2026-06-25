@@ -1,0 +1,19 @@
+{
+  "name": "roster-calculator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "setup": "bash scripts/setup-rpi.sh",
+    "db:init": "node src/scripts/init-db.js",
+    "test:parsers": "node test/parsers.test.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {}
+}
