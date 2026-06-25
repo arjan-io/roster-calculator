@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { parseAirlineCsv } from "../src/parsers/airlineCsvParser.js";
 import { parseSafeLogCsv } from "../src/parsers/safelogCsvParser.js";
+import { parseRosterFile } from "../src/services/parser.service.js";
 
 const airline = `Date,Flight,DepPlace,DepTime,ArrPlace,ArrTime,ACType,Reg,FltTime,PicName,TKoffsDay,TKoffsNight,LandsDay,LandsNight,PIC,CoPlt,Instr,SimTime,SimType
 01/05/26,7921,AMS,11:52,CHQ,15:12,319,OE-LKM,03:20,HES ARJAN,,,,,03:20,,,,
@@ -8,6 +9,11 @@ const airline = `Date,Flight,DepPlace,DepTime,ArrPlace,ArrTime,ACType,Reg,FltTim
 
 const safelog = `Date;Aircraft Type;Aircraft Registration;Name of PIC;Holder's Operating Capacity;Departure;Departure Time;Arrival;Arrival Time;Total Flight Time;Day T-O;Day Ldg;Night T-O;Night Ldg;Day Single-Engine (SE) in Command;Day Single-Engine (SE) PICUS;Day Single-Engine (SE) Dual;Day Single-Engine (SE) P2;Day Multi-Engine (ME) in Command;Day Multi-Engine (ME) PICUS;Day Multi-Engine (ME) Co-Pilot;Day Multi-Engine (ME) Dual;Night Single-Engine (SE) in Command;Night Single-Engine (SE) PICUS;Night Single-Engine (SE) Dual;Night Single-Engine (SE) P2;Night Multi-Engine (ME) in Command;Night Multi-Engine (ME) PICUS;Night Multi-Engine (ME) Co-Pilot;Night Multi-Engine (ME) Dual;Simulator Sim.Type;Simulator Sim.Time;Instrument Flying;Instructor Flying;Any Other Flying;PF;PNF
 2026-06-25;A320neo;OE-LSJ;SELF;PIC;EHAM;12:19 UTC;LMML;15:27 UTC;3:08;1;1;;;;;;;3:08;;;;;;;;;;;;;;;;;3:08;
+`;
+
+const safelogWithOldFlight = `Date;Aircraft Type;Aircraft Registration;Name of PIC;Holder's Operating Capacity;Departure;Departure Time;Arrival;Arrival Time;Total Flight Time;Day T-O;Day Ldg;Night T-O;Night Ldg;Day Single-Engine (SE) in Command;Day Single-Engine (SE) PICUS;Day Single-Engine (SE) Dual;Day Single-Engine (SE) P2;Day Multi-Engine (ME) in Command;Day Multi-Engine (ME) PICUS;Day Multi-Engine (ME) Co-Pilot;Day Multi-Engine (ME) Dual;Night Single-Engine (SE) in Command;Night Single-Engine (SE) PICUS;Night Single-Engine (SE) Dual;Night Single-Engine (SE) P2;Night Multi-Engine (ME) in Command;Night Multi-Engine (ME) PICUS;Night Multi-Engine (ME) Co-Pilot;Night Multi-Engine (ME) Dual;Simulator Sim.Type;Simulator Sim.Time;Instrument Flying;Instructor Flying;Any Other Flying;PF;PNF
+2011-05-31;A320;OE-OLD;SELF;PIC;EHAM;08:00 UTC;EGKK;09:00 UTC;1:00;1;1;;;;;;;1:00;;;;;;;;;;;;;;;;;1:00;
+2011-06-01;A320;OE-NEW;SELF;PIC;EHAM;10:00 UTC;EGKK;11:00 UTC;1:00;1;1;;;;;;;1:00;;;;;;;;;;;;;;;;;1:00;
 `;
 
 const [airlineFlight] = parseAirlineCsv(airline, "airline.csv");
@@ -25,5 +31,10 @@ assert.equal(safeLogFlight.arrivalAirport, "LMML");
 assert.equal(safeLogFlight.departureTimeZone, "UTC");
 assert.equal(safeLogFlight.flightTimeMinutes, 188);
 assert.equal(safeLogFlight.displayCode, "20260625-EHAM-LMML-1219");
+
+const filtered = parseRosterFile(Buffer.from(safelogWithOldFlight), "safelog.csv");
+assert.equal(filtered.flights.length, 1);
+assert.equal(filtered.flights[0].flightDate, "2011-06-01");
+assert.equal(filtered.skippedBeforeCutoff, 1);
 
 console.log("Parser tests passed.");
