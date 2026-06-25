@@ -4,10 +4,10 @@ import {
   clean,
   durationToMinutes,
   fingerprint,
-  normalizeAirport,
   parseDate,
   splitTimeAndZone
 } from "../utils/normalizers.js";
+import { canonicalAirportCode } from "../utils/airportCodes.js";
 
 export function canParseSafeLogCsv(text) {
   return text.includes("Aircraft Type;Aircraft Registration") && text.includes("Departure Time;Arrival");
@@ -29,10 +29,10 @@ function normalizeSafeLogRecord(record, sourceRowNumber, fileName) {
   const flight = {
     flightDate: parseDate(record.Date),
     flightNumber: "",
-    departureAirport: normalizeAirport(record.Departure),
+    departureAirport: canonicalAirportCode(record.Departure),
     departureTime: departure.time,
     departureTimeZone: departure.zone,
-    arrivalAirport: normalizeAirport(record.Arrival),
+    arrivalAirport: canonicalAirportCode(record.Arrival),
     arrivalTime: arrival.time,
     arrivalTimeZone: arrival.zone,
     aircraftType: clean(record["Aircraft Type"]),
