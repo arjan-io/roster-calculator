@@ -8,6 +8,14 @@ const flightsBody = document.querySelector("#flights-body");
 const airportForm = document.querySelector("#airport-form");
 const airportStatus = document.querySelector("#airport-status");
 const airportsBody = document.querySelector("#airports-body");
+const viewButtons = document.querySelectorAll("[data-view-button]");
+const views = document.querySelectorAll("[data-view]");
+
+for (const button of viewButtons) {
+  button.addEventListener("click", () => {
+    showView(button.dataset.viewButton);
+  });
+}
 
 importForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -169,6 +177,16 @@ function formatImportStatus(rowCount, duplicateCount, skippedBeforeCutoff = 0) {
   }
 
   return `${parts.join(", ")}.`;
+}
+
+function showView(viewName) {
+  for (const button of viewButtons) {
+    button.classList.toggle("active", button.dataset.viewButton === viewName);
+  }
+
+  for (const view of views) {
+    view.classList.toggle("active", view.dataset.view === viewName);
+  }
 }
 
 loadDashboard();
