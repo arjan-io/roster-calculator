@@ -27,7 +27,7 @@ importForm.addEventListener("submit", async (event) => {
 
   pendingImport = result;
   const duplicateCount = result.flights.filter((flight) => flight.duplicate).length;
-  previewStatus.textContent = `${result.rowCount} rows found, ${duplicateCount} duplicates.`;
+  previewStatus.textContent = formatImportStatus(result.rowCount, duplicateCount, result.skippedBeforeCutoff);
   commitButton.disabled = result.flights.length === 0;
   renderPreview(result.flights);
 });
@@ -53,7 +53,7 @@ commitButton.addEventListener("click", async () => {
     return;
   }
 
-  previewStatus.textContent = `${result.insertedCount} inserted, ${result.duplicateCount} skipped.`;
+  previewStatus.textContent = `${result.insertedCount} inserted, ${result.duplicateCount} duplicates skipped, ${result.skippedBeforeCutoff || 0} before cutoff skipped.`;
   commitButton.disabled = true;
   pendingImport = null;
   await loadDashboard();
@@ -119,6 +119,16 @@ function minutesToDuration(minutes) {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return `${hours}:${String(mins).padStart(2, "0")}`;
+}
+
+function formatImportStatus(rowCount, duplicateCount, skippedBeforeCutoff = 0) {
+  const parts = [`${rowCount} importable rows found`, `${duplicateCount} duplicates`];
+
+  if (skippedBeforeCutoff) {
+    parts.push(`${skippedBeforeCutoff} before 2011-06-01 skipped`);
+  }
+
+  return `${parts.join(", ")}.`;
 }
 
 loadDashboard();
