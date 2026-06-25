@@ -3,6 +3,7 @@ import { parseAirlineCsv } from "../src/parsers/airlineCsvParser.js";
 import { parseSafeLogCsv } from "../src/parsers/safelogCsvParser.js";
 import { parseRosterFile } from "../src/services/parser.service.js";
 import { canonicalAirportCode } from "../src/utils/airportCodes.js";
+import { normalizeAircraftModel } from "../src/utils/aircraft.js";
 
 const airline = `Date,Flight,DepPlace,DepTime,ArrPlace,ArrTime,ACType,Reg,FltTime,PicName,TKoffsDay,TKoffsNight,LandsDay,LandsNight,PIC,CoPlt,Instr,SimTime,SimType
 01/05/26,7921,AMS,11:52,CHQ,15:12,319,OE-LKM,03:20,HES ARJAN,,,,,03:20,,,,
@@ -20,28 +21,32 @@ const safelogWithOldFlight = `Date;Aircraft Type;Aircraft Registration;Name of P
 const [airlineFlight] = parseAirlineCsv(airline, "airline.csv");
 assert.equal(airlineFlight.flightDate, "2026-05-01");
 assert.equal(airlineFlight.flightNumber, "7921");
-assert.equal(airlineFlight.departureAirport, "EHAM");
-assert.equal(airlineFlight.arrivalAirport, "LGSA");
+assert.equal(airlineFlight.departureAirport, "AMS");
+assert.equal(airlineFlight.arrivalAirport, "CHQ");
+assert.equal(airlineFlight.aircraftType, "A319");
 assert.equal(airlineFlight.flightTimeMinutes, 200);
 assert.equal(airlineFlight.displayCode, "20260501-7921-1152");
 
 const [safeLogFlight] = parseSafeLogCsv(safelog, "safelog.csv");
 assert.equal(safeLogFlight.flightDate, "2026-06-25");
-assert.equal(safeLogFlight.departureAirport, "EHAM");
-assert.equal(safeLogFlight.arrivalAirport, "LMML");
+assert.equal(safeLogFlight.departureAirport, "AMS");
+assert.equal(safeLogFlight.arrivalAirport, "MLA");
 assert.equal(safeLogFlight.departureTimeZone, "UTC");
 assert.equal(safeLogFlight.flightTimeMinutes, 188);
-assert.equal(safeLogFlight.displayCode, "20260625-EHAM-LMML-1219");
+assert.equal(safeLogFlight.displayCode, "20260625-AMS-MLA-1219");
 
 const filtered = parseRosterFile(Buffer.from(safelogWithOldFlight), "safelog.csv");
 assert.equal(filtered.flights.length, 1);
 assert.equal(filtered.flights[0].flightDate, "2011-06-01");
 assert.equal(filtered.skippedBeforeCutoff, 1);
 
-assert.equal(canonicalAirportCode("AMS"), "EHAM");
-assert.equal(canonicalAirportCode("EHAM"), "EHAM");
-assert.equal(canonicalAirportCode("CHQ"), "LGSA");
+assert.equal(canonicalAirportCode("AMS"), "AMS");
+assert.equal(canonicalAirportCode("EHAM"), "AMS");
+assert.equal(canonicalAirportCode("CHQ"), "CHQ");
+assert.equal(canonicalAirportCode("EDDB"), "BER");
 assert.equal(canonicalAirportCode("Berlin-Schönefeld Airport (Closed)"), "SXF");
 assert.equal(canonicalAirportCode("Berlin-Schonefeld Airport (Closed)"), "SXF");
+assert.equal(normalizeAircraftModel("319"), "A319");
+assert.equal(normalizeAircraftModel("A320neo"), "A320NEO");
 
 console.log("Parser tests passed.");
