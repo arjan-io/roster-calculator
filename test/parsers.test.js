@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { parseAirlineCsv } from "../src/parsers/airlineCsvParser.js";
 import { parseSafeLogCsv } from "../src/parsers/safelogCsvParser.js";
 import { parseRosterFile } from "../src/services/parser.service.js";
+import { canonicalAirportCode } from "../src/utils/airportCodes.js";
 
 const airline = `Date,Flight,DepPlace,DepTime,ArrPlace,ArrTime,ACType,Reg,FltTime,PicName,TKoffsDay,TKoffsNight,LandsDay,LandsNight,PIC,CoPlt,Instr,SimTime,SimType
 01/05/26,7921,AMS,11:52,CHQ,15:12,319,OE-LKM,03:20,HES ARJAN,,,,,03:20,,,,
@@ -19,8 +20,8 @@ const safelogWithOldFlight = `Date;Aircraft Type;Aircraft Registration;Name of P
 const [airlineFlight] = parseAirlineCsv(airline, "airline.csv");
 assert.equal(airlineFlight.flightDate, "2026-05-01");
 assert.equal(airlineFlight.flightNumber, "7921");
-assert.equal(airlineFlight.departureAirport, "AMS");
-assert.equal(airlineFlight.arrivalAirport, "CHQ");
+assert.equal(airlineFlight.departureAirport, "EHAM");
+assert.equal(airlineFlight.arrivalAirport, "LGSA");
 assert.equal(airlineFlight.flightTimeMinutes, 200);
 assert.equal(airlineFlight.displayCode, "20260501-7921-1152");
 
@@ -36,5 +37,9 @@ const filtered = parseRosterFile(Buffer.from(safelogWithOldFlight), "safelog.csv
 assert.equal(filtered.flights.length, 1);
 assert.equal(filtered.flights[0].flightDate, "2011-06-01");
 assert.equal(filtered.skippedBeforeCutoff, 1);
+
+assert.equal(canonicalAirportCode("AMS"), "EHAM");
+assert.equal(canonicalAirportCode("EHAM"), "EHAM");
+assert.equal(canonicalAirportCode("CHQ"), "LGSA");
 
 console.log("Parser tests passed.");
