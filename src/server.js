@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import importsRouter from "./routes/imports.router.js";
 import flightsRouter from "./routes/flights.router.js";
+import airportsRouter from "./routes/airports.router.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,6 +17,7 @@ app.use(express.static(path.join(__dirname, "../public")));
 
 app.use("/api/imports", importsRouter);
 app.use("/api/flights", flightsRouter);
+app.use("/api/airports", airportsRouter);
 
 app.get("/", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/index.html"));
