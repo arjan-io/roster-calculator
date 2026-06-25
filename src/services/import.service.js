@@ -1,4 +1,5 @@
 import { db, transaction } from "../db/connection.js";
+import { isImportableFlightDate } from "../config/importRules.js";
 
 const insertBatch = db.prepare(`
   INSERT INTO import_batches (
@@ -83,15 +84,17 @@ export function previewImport(flights) {
 export const commitImport = transaction(({ sourceFormat, originalFileName, flights }) => {
   let insertedCount = 0;
   let duplicateCount = 0;
+  const importableFlights = flights.filter((flight) => isImportableFlightDate(flight.flightDate));
+  const skippedBeforeCutoff = flights.length - importableFlights.length;
 
-  const preview = previewImport(flights);
+  const preview = previewImport(importableFlights);
   const batch = insertBatch.run({
     sourceFormat,
     originalFileName,
-    rowCount: flights.length,
+    rowCount: importableFlights.length,
     insertedCount: 0,
     duplicateCount: 0,
-    notes: ""
+    notes: skippedBeforeCutoff ? `${skippedBeforeCutoff} rows skipped before 2011-06-01` : ""
   });
 
   for (const flight of preview) {
@@ -116,9 +119,10 @@ export const commitImport = transaction(({ sourceFormat, originalFileName, fligh
 
   return {
     importBatchId: batch.lastInsertRowid,
-    rowCount: flights.length,
+    rowCount: importableFlights.length,
     insertedCount,
-    duplicateCount
+    duplicateCount,
+    skippedBeforeCutoff
   };
 });
 
