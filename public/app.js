@@ -5,6 +5,9 @@ const commitButton = document.querySelector("#commit-button");
 const previewStatus = document.querySelector("#preview-status");
 const previewBody = document.querySelector("#preview-body");
 const flightsBody = document.querySelector("#flights-body");
+const airportForm = document.querySelector("#airport-form");
+const airportStatus = document.querySelector("#airport-status");
+const airportsBody = document.querySelector("#airports-body");
 
 importForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -57,6 +60,28 @@ commitButton.addEventListener("click", async () => {
   await loadDashboard();
 });
 
+airportForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const payload = Object.fromEntries(new FormData(airportForm));
+  airportStatus.textContent = "Saving airport...";
+
+  const response = await fetch("/api/airports", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    airportStatus.textContent = result.error || "Could not save airport.";
+    return;
+  }
+
+  airportStatus.textContent = `${result.code} saved.`;
+  airportForm.reset();
+  await loadAirports();
+});
+
 function renderPreview(flights) {
   previewBody.innerHTML = "";
   for (const flight of flights.slice(0, 100)) {
@@ -100,6 +125,21 @@ async function loadDashboard() {
   }
 }
 
+async function loadAirports() {
+  const response = await fetch("/api/airports");
+  const airports = await response.json();
+
+  airportsBody.innerHTML = "";
+  for (const airport of airports) {
+    airportsBody.append(row([
+      airport.code,
+      airport.name || "-",
+      Number(airport.latitude).toFixed(6),
+      Number(airport.longitude).toFixed(6)
+    ]));
+  }
+}
+
 function row(values, duplicate = false) {
   const tr = document.createElement("tr");
   if (duplicate) {
@@ -132,3 +172,4 @@ function formatImportStatus(rowCount, duplicateCount, skippedBeforeCutoff = 0) {
 }
 
 loadDashboard();
+loadAirports();
