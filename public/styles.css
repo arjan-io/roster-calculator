@@ -93,8 +93,21 @@ form {
   align-items: center;
 }
 
+input {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  padding: 0 10px;
+  font: inherit;
+}
+
 input[type="file"] {
   max-width: 420px;
+}
+
+.airport-form {
+  display: grid;
+  grid-template-columns: 90px minmax(180px, 1fr) minmax(230px, 1fr) auto;
+  margin-bottom: 10px;
 }
 
 .summary-grid {
@@ -171,6 +184,7 @@ tr.duplicate td {
   .app-header,
   .toolbar,
   form,
+  .airport-form,
   .section-heading {
     align-items: stretch;
     flex-direction: column;
@@ -183,5 +197,9 @@ tr.duplicate td {
 
   .summary-grid {
     display: grid;
+  }
+
+  .airport-form {
+    grid-template-columns: 1fr;
   }
 }
