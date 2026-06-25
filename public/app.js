@@ -65,7 +65,8 @@ function renderPreview(flights) {
       flight.flightNumber || "-",
       `${flight.departureAirport} -> ${flight.arrivalAirport}`,
       `${flight.departureTime || "-"} - ${flight.arrivalTime || "-"}`,
-      [flight.aircraftType, flight.aircraftRegistration].filter(Boolean).join(" "),
+      flight.aircraftType || "-",
+      flight.aircraftRegistration || "-",
       flight.duplicate ? "Duplicate" : "New"
     ], flight.duplicate));
   }
@@ -92,7 +93,8 @@ async function loadDashboard() {
       flight.flightNumber || "-",
       `${flight.departureAirport} -> ${flight.arrivalAirport}`,
       `${flight.departureTime || "-"} - ${flight.arrivalTime || "-"}`,
-      [flight.aircraftType, flight.aircraftRegistration].filter(Boolean).join(" "),
+      flight.aircraftType || "-",
+      flight.aircraftRegistration || "-",
       flight.sourceFormat
     ]));
   }
