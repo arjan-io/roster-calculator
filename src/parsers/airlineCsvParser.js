@@ -8,6 +8,7 @@ import {
   splitTimeAndZone
 } from "../utils/normalizers.js";
 import { canonicalAirportCode } from "../utils/airportCodes.js";
+import { normalizeAircraftModel } from "../utils/aircraft.js";
 
 export function canParseAirlineCsv(text) {
   return text.includes("DepPlace") && text.includes("ArrPlace") && text.includes("FltTime");
@@ -35,7 +36,7 @@ function normalizeAirlineRecord(record, sourceRowNumber, fileName) {
     arrivalAirport: canonicalAirportCode(record.ArrPlace),
     arrivalTime: arrival.time,
     arrivalTimeZone: arrival.zone,
-    aircraftType: clean(record.ACType),
+    aircraftType: normalizeAircraftModel(record.ACType),
     aircraftRegistration: clean(record.Reg).toUpperCase(),
     flightTimeMinutes: durationToMinutes(record.FltTime),
     picName: clean(record.PicName),
