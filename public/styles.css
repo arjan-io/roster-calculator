@@ -138,12 +138,32 @@ section {
   margin-bottom: 24px;
 }
 
+.view {
+  display: none;
+}
+
+.view.active {
+  display: block;
+}
+
+.empty-view {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 22px;
+}
+
+.empty-view p {
+  color: var(--muted);
+  margin-top: 8px;
+}
+
 .section-heading {
   display: flex;
   align-items: end;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 8px;
+  margin-top: 18px;
 }
 
 .section-heading p {
