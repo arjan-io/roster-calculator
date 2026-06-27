@@ -13,6 +13,7 @@ export function listFlights({ limit = 100 } = {}) {
       aircraft_type AS aircraftType,
       aircraft_registration AS aircraftRegistration,
       flight_time_minutes AS flightTimeMinutes,
+      distance_nm AS distanceNm,
       display_code AS displayCode,
       source_format AS sourceFormat
     FROM flights
