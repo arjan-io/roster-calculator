@@ -2,6 +2,7 @@ let pendingImport = null;
 let airports = [];
 let duties = [];
 let paymentPeriods = [];
+let dutyFilter = "all";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -19,6 +20,17 @@ $("#airport-form").addEventListener("submit", saveAirport);
 $("#duty-form").addEventListener("submit", saveDuty);
 $("#payment-period-form").addEventListener("submit", savePaymentPeriod);
 $("#add-component").addEventListener("click", () => addComponentRow());
+$("#paid-toggle").addEventListener("click", () => {
+  const paid = $("#duty-form [name='paid']").value !== "1";
+  setPaidToggle(paid);
+});
+for (const button of $("[data-duty-filter]")) {
+  button.addEventListener("click", () => {
+    dutyFilter = button.dataset.dutyFilter;
+    $("[data-duty-filter]").forEach((item) => item.classList.toggle("active", item === button));
+    renderDuties();
+  });
+}
 $("[data-cancel='airport']").addEventListener("click", resetAirportForm);
 $("[data-cancel='duty']").addEventListener("click", resetDutyForm);
 $("[data-cancel='payment']").addEventListener("click", resetPaymentForm);
@@ -152,6 +164,7 @@ async function handleDutyAction(event) {
   const duty = duties.find((item) => item.id === Number(button.dataset.id));
   if (button.dataset.action === "edit") {
     fillForm($("#duty-form"), duty);
+    setPaidToggle(Boolean(duty.paid));
     $("[data-cancel='duty']").classList.remove("hidden");
   }
   if (button.dataset.action === "delete" && confirm("Delete this duty?")) {
@@ -204,9 +217,7 @@ async function loadDuties() {
   const selected = select.value;
   select.replaceChildren(new Option("Select duty", ""), ...types.map((type) => new Option(type.name, type.id)));
   select.value = selected;
-  $("#duties-body").replaceChildren(...duties.map((duty) =>
-    actionRow([duty.dutyDate, duty.dutyName, duty.notes || "-"], duty.id)
-  ));
+  renderDuties();
 }
 
 async function loadPaymentPeriods() {
@@ -232,9 +243,25 @@ async function loadIssues() {
     const button = document.createElement("button");
     button.className = "issue-row";
     button.innerHTML = `<strong>${escapeHtml(issue.label)}</strong><span>${escapeHtml(issue.detail)}</span>`;
-    button.addEventListener("click", () => { showPage("data"); showPanel($("[data-page='data']"), issue.target); });
+    button.addEventListener("click", () => {
+      const rosterTarget = ["flights", "duties"].includes(issue.target);
+      const page = rosterTarget ? "roster" : "data";
+      showPage(page);
+      showPanel($(`[data-page='${page}']`), issue.target);
+    });
     return button;
   }));
+}
+
+function renderDuties() {
+  const filtered = duties.filter((duty) =>
+    dutyFilter === "all" ||
+    (dutyFilter === "paid" && duty.paid) ||
+    (dutyFilter === "unpaid" && !duty.paid)
+  );
+  $("#duties-body").replaceChildren(...filtered.map((duty) =>
+    actionRow([duty.dutyDate, duty.dutyName, duty.paid ? "Yes" : "No"], duty.id)
+  ));
 }
 
 function renderPreview(flights) {
@@ -285,7 +312,15 @@ function resetAirportForm() {
 function resetDutyForm() {
   $("#duty-form").reset();
   $("#duty-form [name='id']").value = "";
+  setPaidToggle(false);
   $("[data-cancel='duty']").classList.add("hidden");
+}
+function setPaidToggle(paid) {
+  const toggle = $("#paid-toggle");
+  toggle.textContent = paid ? "Yes" : "No";
+  toggle.setAttribute("aria-pressed", String(paid));
+  toggle.classList.toggle("active", paid);
+  $("#duty-form [name='paid']").value = paid ? "1" : "0";
 }
 function fillForm(form, values) {
   for (const [name, value] of Object.entries(values)) {
