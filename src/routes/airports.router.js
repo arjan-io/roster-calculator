@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  deleteAirport,
   getAirportDistance,
   listAirports,
   saveAirport
@@ -14,6 +15,22 @@ router.get("/", (_req, res) => {
 router.post("/", (req, res, next) => {
   try {
     res.json(saveAirport(req.body));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.put("/:id", (req, res, next) => {
+  try {
+    res.json(saveAirport({ ...req.body, id: req.params.id }));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/:id", (req, res, next) => {
+  try {
+    res.json(deleteAirport(req.params.id));
   } catch (error) {
     next(error);
   }
