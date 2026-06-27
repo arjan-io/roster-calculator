@@ -127,6 +127,32 @@ function migrateAirportCodes() {
     updateDeparture.run(canonical, alias);
     updateArrival.run(canonical, alias);
   }
+
+  db.exec(`
+    UPDATE flights
+    SET departure_airport = (
+      SELECT COALESCE(airports.iata, airports.code)
+      FROM airport_aliases
+      JOIN airports ON airports.id = airport_aliases.airport_id
+      WHERE airport_aliases.alias = flights.departure_airport
+    )
+    WHERE EXISTS (
+      SELECT 1 FROM airport_aliases
+      WHERE airport_aliases.alias = flights.departure_airport
+    );
+
+    UPDATE flights
+    SET arrival_airport = (
+      SELECT COALESCE(airports.iata, airports.code)
+      FROM airport_aliases
+      JOIN airports ON airports.id = airport_aliases.airport_id
+      WHERE airport_aliases.alias = flights.arrival_airport
+    )
+    WHERE EXISTS (
+      SELECT 1 FROM airport_aliases
+      WHERE airport_aliases.alias = flights.arrival_airport
+    );
+  `);
 }
 
 function componentUsesRatio(code, ratio) {
