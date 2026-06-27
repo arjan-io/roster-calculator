@@ -53,11 +53,12 @@ function clearExcelOwnedTables() {
 
 function importAirports() {
   const insertAirport = db.prepare(`
-    INSERT INTO airports (code, iata, name, latitude, longitude, updated_at)
-    VALUES (@code, @code, @name, @latitude, @longitude, CURRENT_TIMESTAMP)
+    INSERT INTO airports (code, iata, name, coordinate_text, latitude, longitude, updated_at)
+    VALUES (@code, @code, @name, @coordinateText, @latitude, @longitude, CURRENT_TIMESTAMP)
     ON CONFLICT(code) DO UPDATE SET
       iata = excluded.iata,
       name = excluded.name,
+      coordinate_text = excluded.coordinate_text,
       latitude = excluded.latitude,
       longitude = excluded.longitude,
       updated_at = CURRENT_TIMESTAMP
@@ -79,10 +80,30 @@ function importAirports() {
     insertAirport.run({
       code,
       name: code,
+      coordinateText: decimalToLido(row["dec.lat"], row["dec.long"]),
       latitude: row["dec.lat"],
       longitude: row["dec.long"]
     });
     count += 1;
+  }
+
+  for (const row of readTable("Data gen", "A2:J161")) {
+    const sourceCode = clean(row.name).toUpperCase();
+    const code = canonicalAirportCode(sourceCode);
+    if (!/^[A-Z]{3}$/.test(code) || !isFiniteNumber(row["dec.lat"]) || !isFiniteNumber(row["dec.long"])) {
+      continue;
+    }
+
+    insertAirport.run({
+      code,
+      name: code,
+      coordinateText: decimalToLido(row["dec.lat"], row["dec.long"]),
+      latitude: row["dec.lat"],
+      longitude: row["dec.long"]
+    });
+    const airport = selectAirport.get(code);
+    updateIcao.run(sourceCode, airport.id);
+    insertAlias.run(airport.id, sourceCode);
   }
 
   for (const row of readTable("Data gen", "W2:X163")) {
@@ -375,6 +396,18 @@ function dateToIso(value) {
 
   const text = clean(value);
   return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
+}
+
+function decimalToLido(latitude, longitude) {
+  return `${decimalPart(latitude, "N", "S", 2)} ${decimalPart(longitude, "E", "W", 3)}`;
+}
+
+function decimalPart(value, positive, negative, degreeWidth) {
+  const absolute = Math.abs(Number(value));
+  const degrees = Math.floor(absolute);
+  const minutes = ((absolute - degrees) * 60).toFixed(1);
+  const hemisphere = Number(value) < 0 ? negative : positive;
+  return `${hemisphere} ${String(degrees).padStart(degreeWidth, "0")} ${minutes.padStart(4, "0")}`;
 }
 
 function monthToNumber(value) {
