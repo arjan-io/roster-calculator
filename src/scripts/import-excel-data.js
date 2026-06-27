@@ -28,8 +28,7 @@ const stats = transaction(() => {
     miscDuties: importMiscDuties(),
     salaryScales: importSalaryScales(),
     oneOffPayments: importOneOffPayments(),
-    deductions: importDeductions(),
-    claims: importClaims()
+    deductions: importDeductions()
   };
 })();
 
@@ -47,7 +46,6 @@ function clearExcelOwnedTables() {
     DELETE FROM salary_scales;
     DELETE FROM one_off_payments;
     DELETE FROM deductions;
-    DELETE FROM claims;
   `);
 }
 
@@ -269,44 +267,6 @@ function importDeductions() {
       insert.run(effectiveDate, description, numberOrZero(row[description]));
       count += 1;
     }
-  }
-
-  return count;
-}
-
-function importClaims() {
-  const insert = db.prepare(`
-    INSERT INTO claims (
-      claim_number,
-      subject,
-      submitted_on,
-      processed_on,
-      status,
-      amount,
-      paid,
-      paid_on
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  let count = 0;
-  for (const row of readTable("Claims", "A1:H21")) {
-    const subject = clean(row.Subject);
-    if (!subject) {
-      continue;
-    }
-
-    insert.run(
-      clean(row.Number),
-      subject,
-      dateToIso(row.Submitted),
-      dateToIso(row["Processed on"]),
-      clean(row["Appr./Denie."]),
-      numberOrZero(row.Amount),
-      clean(row.Paid).toLowerCase() === "yes" ? 1 : 0,
-      dateToIso(row["On date"])
-    );
-    count += 1;
   }
 
   return count;
