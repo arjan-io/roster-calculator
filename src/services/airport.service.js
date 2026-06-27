@@ -53,8 +53,8 @@ export function saveAirport({ id, code, iata, icao, name, lidoCoordinate }) {
 
       const airport = db.prepare("SELECT id FROM airports WHERE iata = ?").get(iataCode);
       db.prepare("INSERT OR IGNORE INTO airport_aliases (airport_id, alias) VALUES (?, ?)").run(airport.id, iataCode);
+      db.prepare("DELETE FROM airport_aliases WHERE airport_id = ? AND length(alias) = 4").run(airport.id);
       if (icaoCode) {
-        db.prepare("DELETE FROM airport_aliases WHERE airport_id = ? AND length(alias) = 4").run(airport.id);
         db.prepare("INSERT OR IGNORE INTO airport_aliases (airport_id, alias) VALUES (?, ?)").run(airport.id, icaoCode);
       }
       recalculateFlightDistances();
