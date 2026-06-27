@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS flights (
   aircraft_type TEXT,
   aircraft_registration TEXT,
   flight_time_minutes INTEGER,
+  distance_nm REAL,
   pic_name TEXT,
   operating_capacity TEXT,
   pf_minutes INTEGER,
@@ -40,7 +41,10 @@ CREATE TABLE IF NOT EXISTS flights (
 CREATE TABLE IF NOT EXISTS airports (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   code TEXT NOT NULL UNIQUE,
+  iata TEXT UNIQUE,
+  icao TEXT UNIQUE,
   name TEXT,
+  coordinate_text TEXT,
   latitude REAL,
   longitude REAL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -51,7 +55,7 @@ CREATE TABLE IF NOT EXISTS airport_aliases (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   airport_id INTEGER NOT NULL,
   alias TEXT NOT NULL UNIQUE,
-  FOREIGN KEY (airport_id) REFERENCES airports(id)
+  FOREIGN KEY (airport_id) REFERENCES airports(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS duty_types (
@@ -86,9 +90,28 @@ CREATE TABLE IF NOT EXISTS salary_scales (
   pension_amount REAL NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS payment_periods (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  effective_date TEXT NOT NULL UNIQUE,
+  basic_salary REAL NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS payment_components (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  payment_period_id INTEGER NOT NULL,
+  code TEXT NOT NULL,
+  name TEXT NOT NULL,
+  calculation_type TEXT NOT NULL CHECK (calculation_type IN ('ratio', 'fixed')),
+  ratio REAL,
+  amount REAL,
+  FOREIGN KEY (payment_period_id) REFERENCES payment_periods(id) ON DELETE CASCADE,
+  UNIQUE (payment_period_id, code)
+);
+
 CREATE TABLE IF NOT EXISTS one_off_payments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  payment_month INTEGER NOT NULL,
+  payment_month INTEGER NOT NULL CHECK (payment_month BETWEEN 1 AND 12),
   payment_year INTEGER NOT NULL,
   description TEXT NOT NULL,
   amount REAL NOT NULL
@@ -101,21 +124,16 @@ CREATE TABLE IF NOT EXISTS deductions (
   amount REAL NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS claims (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  claim_number TEXT,
-  subject TEXT NOT NULL,
-  submitted_on TEXT,
-  processed_on TEXT,
-  status TEXT,
-  amount REAL NOT NULL DEFAULT 0,
-  paid INTEGER NOT NULL DEFAULT 0,
-  paid_on TEXT
-);
-
 CREATE TABLE IF NOT EXISTS leave_entries (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   leave_date TEXT NOT NULL,
   leave_type TEXT NOT NULL,
   notes TEXT
 );
+
+CREATE INDEX IF NOT EXISTS idx_flights_route
+  ON flights (departure_airport, arrival_airport);
+CREATE INDEX IF NOT EXISTS idx_misc_duties_date
+  ON misc_duties (duty_date);
+CREATE INDEX IF NOT EXISTS idx_payment_periods_date
+  ON payment_periods (effective_date);
