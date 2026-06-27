@@ -53,9 +53,10 @@ function clearExcelOwnedTables() {
 
 function importAirports() {
   const insertAirport = db.prepare(`
-    INSERT INTO airports (code, name, latitude, longitude, updated_at)
-    VALUES (@code, @name, @latitude, @longitude, CURRENT_TIMESTAMP)
+    INSERT INTO airports (code, iata, name, latitude, longitude, updated_at)
+    VALUES (@code, @code, @name, @latitude, @longitude, CURRENT_TIMESTAMP)
     ON CONFLICT(code) DO UPDATE SET
+      iata = excluded.iata,
       name = excluded.name,
       latitude = excluded.latitude,
       longitude = excluded.longitude,
@@ -66,6 +67,7 @@ function importAirports() {
     INSERT OR IGNORE INTO airport_aliases (airport_id, alias)
     VALUES (?, ?)
   `);
+  const updateIcao = db.prepare("UPDATE airports SET icao = ? WHERE id = ?");
 
   let count = 0;
   for (const row of readTable("Data gen", "L2:U162")) {
@@ -92,6 +94,7 @@ function importAirports() {
 
     const airport = selectAirport.get(code);
     if (airport) {
+      updateIcao.run(alias, airport.id);
       insertAlias.run(airport.id, alias);
       insertAlias.run(airport.id, code);
     }
