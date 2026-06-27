@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { db, transaction } from "../db/connection.js";
+import { recalculateFlightDistances } from "../services/airport.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,7 +15,8 @@ transaction(() => {
   migrateExistingData();
 })();
 
-console.log("Database initialized and migrated.");
+recalculateFlightDistances();
+console.log("Database initialized, migrated, and sector distances recalculated.");
 
 function migrateExistingTables() {
   if (tableExists("airports")) {
