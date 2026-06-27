@@ -2,6 +2,21 @@ import { db } from "../db/connection.js";
 
 export function listIssues() {
   const issues = [];
+  const blankAirports = db.prepare(`
+    SELECT COUNT(*) AS occurrences
+    FROM flights
+    WHERE trim(COALESCE(departure_airport, '')) = ''
+       OR trim(COALESCE(arrival_airport, '')) = ''
+  `).get();
+  if (blankAirports.occurrences) {
+    issues.push({
+      type: "blank_airport",
+      label: "A flight has a blank airport code",
+      detail: `${blankAirports.occurrences} sector${blankAirports.occurrences === 1 ? "" : "s"} affected`,
+      target: "flights"
+    });
+  }
+
   const missingAirports = db.prepare(`
     SELECT airport, COUNT(*) AS occurrences
     FROM (
@@ -9,10 +24,16 @@ export function listIssues() {
       UNION ALL
       SELECT arrival_airport AS airport FROM flights
     )
-    WHERE NOT EXISTS (
+    WHERE trim(COALESCE(airport, '')) <> ''
+      AND NOT EXISTS (
       SELECT 1 FROM airports
       WHERE COALESCE(airports.iata, airports.code) = airport
          OR airports.icao = airport
+         OR EXISTS (
+           SELECT 1 FROM airport_aliases
+           WHERE airport_aliases.airport_id = airports.id
+             AND airport_aliases.alias = airport
+         )
     )
     GROUP BY airport ORDER BY occurrences DESC
   `).all();
