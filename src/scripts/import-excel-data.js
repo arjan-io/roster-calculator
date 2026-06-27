@@ -102,7 +102,16 @@ function importAirports() {
     INSERT OR IGNORE INTO airport_aliases (airport_id, alias)
     VALUES (?, ?)
   `);
+  const clearIcao = db.prepare("UPDATE airports SET icao = NULL WHERE icao = ? AND id <> ?");
+  const removeOldAlias = db.prepare("DELETE FROM airport_aliases WHERE alias = ? AND airport_id <> ?");
   const updateIcao = db.prepare("UPDATE airports SET icao = ? WHERE id = ?");
+
+  function assignIcao(airportId, alias) {
+    clearIcao.run(alias, airportId);
+    removeOldAlias.run(alias, airportId);
+    updateIcao.run(alias, airportId);
+    insertAlias.run(airportId, alias);
+  }
 
   let count = 0;
   for (const row of readTable("Data gen", "L2:U162")) {
@@ -136,8 +145,7 @@ function importAirports() {
       longitude: row["dec.long"]
     });
     const airport = selectAirport.get(code);
-    updateIcao.run(sourceCode, airport.id);
-    insertAlias.run(airport.id, sourceCode);
+    assignIcao(airport.id, sourceCode);
   }
 
   for (const row of readTable("Data gen", "W2:X163")) {
@@ -151,8 +159,7 @@ function importAirports() {
     const targetCode = /^[A-Z]{3}$/.test(mappedCode) ? mappedCode : code;
     const airport = selectAirport.get(targetCode);
     if (airport) {
-      updateIcao.run(alias, airport.id);
-      insertAlias.run(airport.id, alias);
+      assignIcao(airport.id, alias);
       insertAlias.run(airport.id, code);
     }
   }
