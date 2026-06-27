@@ -131,6 +131,10 @@ CREATE TABLE IF NOT EXISTS leave_entries (
   notes TEXT
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_airports_iata_unique
+  ON airports (iata) WHERE iata IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_airports_icao_unique
+  ON airports (icao) WHERE icao IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_flights_route
   ON flights (departure_airport, arrival_airport);
 CREATE INDEX IF NOT EXISTS idx_misc_duties_date
