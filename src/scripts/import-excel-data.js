@@ -92,7 +92,9 @@ function importAirports() {
       continue;
     }
 
-    const airport = selectAirport.get(code);
+    const mappedCode = canonicalAirportCode(alias);
+    const targetCode = /^[A-Z]{3}$/.test(mappedCode) ? mappedCode : code;
+    const airport = selectAirport.get(targetCode);
     if (airport) {
       updateIcao.run(alias, airport.id);
       insertAlias.run(airport.id, alias);
