@@ -3,6 +3,7 @@ import process from "node:process";
 import xlsx from "xlsx";
 import { db, transaction } from "../db/connection.js";
 import { canonicalAirportCode } from "../utils/airportCodes.js";
+import { recalculateFlightDistances } from "../services/airport.service.js";
 
 const workbookPath = process.argv[2];
 const replaceExisting = process.argv.includes("--replace");
@@ -32,9 +33,30 @@ const stats = transaction(() => {
   };
 })();
 
+normalizeFlightsFromAirportAliases();
+recalculateFlightDistances();
+
 console.log(`Imported Excel data from ${path.basename(workbookPath)}:`);
 for (const [label, count] of Object.entries(stats)) {
   console.log(`- ${label}: ${count}`);
+}
+
+function normalizeFlightsFromAirportAliases() {
+  for (const column of ["departure_airport", "arrival_airport"]) {
+    db.exec(`
+      UPDATE flights
+      SET ${column} = (
+        SELECT COALESCE(airports.iata, airports.code)
+        FROM airport_aliases
+        JOIN airports ON airports.id = airport_aliases.airport_id
+        WHERE airport_aliases.alias = flights.${column}
+      )
+      WHERE EXISTS (
+        SELECT 1 FROM airport_aliases
+        WHERE airport_aliases.alias = flights.${column}
+      )
+    `);
+  }
 }
 
 function clearExcelOwnedTables() {
