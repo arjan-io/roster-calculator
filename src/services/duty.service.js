@@ -10,14 +10,14 @@ export function listDutyTypes() {
 export function listMiscDuties() {
   return db.prepare(`
     SELECT m.id, m.duty_date AS dutyDate, m.duty_type_id AS dutyTypeId,
-           d.code AS dutyCode, d.name AS dutyName, m.notes
+           d.code AS dutyCode, d.name AS dutyName, m.paid, m.notes
     FROM misc_duties m
     JOIN duty_types d ON d.id = m.duty_type_id
     ORDER BY m.duty_date DESC, m.id DESC
   `).all();
 }
 
-export function saveMiscDuty({ id, dutyDate, dutyTypeId, notes }) {
+export function saveMiscDuty({ id, dutyDate, dutyTypeId, paid }) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dutyDate || ""))) {
     throw new Error("Select a valid duty date.");
   }
@@ -27,13 +27,13 @@ export function saveMiscDuty({ id, dutyDate, dutyTypeId, notes }) {
 
   if (id) {
     const result = db.prepare(`
-      UPDATE misc_duties SET duty_date = ?, duty_type_id = ?, notes = ? WHERE id = ?
-    `).run(dutyDate, Number(dutyTypeId), clean(notes), Number(id));
+      UPDATE misc_duties SET duty_date = ?, duty_type_id = ?, paid = ? WHERE id = ?
+    `).run(dutyDate, Number(dutyTypeId), toBoolean(paid), Number(id));
     if (!result.changes) throw new Error("Duty not found.");
   } else {
     db.prepare(`
-      INSERT INTO misc_duties (duty_date, duty_type_id, notes) VALUES (?, ?, ?)
-    `).run(dutyDate, Number(dutyTypeId), clean(notes));
+      INSERT INTO misc_duties (duty_date, duty_type_id, paid) VALUES (?, ?, ?)
+    `).run(dutyDate, Number(dutyTypeId), toBoolean(paid));
   }
   return { saved: true };
 }
@@ -44,6 +44,6 @@ export function deleteMiscDuty(id) {
   return { deleted: true };
 }
 
-function clean(value) {
-  return String(value ?? "").trim();
+function toBoolean(value) {
+  return value === true || value === 1 || value === "1" || value === "true" ? 1 : 0;
 }
