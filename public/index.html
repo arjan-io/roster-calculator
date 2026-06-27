@@ -56,11 +56,19 @@
             <input name="id" type="hidden">
             <label>Date<input name="dutyDate" type="date" required></label>
             <label>Duty<select name="dutyTypeId" required></select></label>
-            <label class="wide">Notes<input name="notes" type="text"></label>
+            <label>Paid
+              <button class="toggle-button" type="button" id="paid-toggle" aria-pressed="false">No</button>
+              <input name="paid" type="hidden" value="0">
+            </label>
             <button type="submit">Save duty</button>
             <button class="secondary hidden" type="button" data-cancel="duty">Cancel</button>
           </form>
-          <div class="table-wrap"><table><thead><tr><th>Date</th><th>Duty</th><th>Notes</th><th class="actions" colspan="2">Actions</th></tr></thead><tbody id="duties-body"></tbody></table></div>
+          <div class="table-tools" aria-label="Filter duties">
+            <button class="active" type="button" data-duty-filter="all">All</button>
+            <button type="button" data-duty-filter="unpaid">Unpaid</button>
+            <button type="button" data-duty-filter="paid">Paid</button>
+          </div>
+          <div class="table-wrap"><table><thead><tr><th>Date</th><th>Duty</th><th>Paid</th><th class="actions" colspan="2">Actions</th></tr></thead><tbody id="duties-body"></tbody></table></div>
         </section>
       </section>
 
