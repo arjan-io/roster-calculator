@@ -43,6 +43,8 @@ function clearExcelOwnedTables() {
     DELETE FROM airports;
     DELETE FROM misc_duties;
     DELETE FROM duty_types;
+    DELETE FROM payment_components;
+    DELETE FROM payment_periods;
     DELETE FROM salary_scales;
     DELETE FROM one_off_payments;
     DELETE FROM deductions;
@@ -205,7 +207,7 @@ function importSalaryScales() {
       continue;
     }
 
-    insert.run({
+    const values = {
       effectiveDate,
       basicSalary: numberOrZero(row.basic),
       sectorRate: numberOrZero(row.sector1),
@@ -217,11 +219,54 @@ function importSalaryScales() {
       travelAmount: numberOrZero(row.reiskosten),
       wflyAmount: numberOrZero(row.WFLY),
       pensionAmount: numberOrZero(row.Pensioen)
-    });
+    };
+    insert.run(values);
+    importPaymentPeriod(values);
     count += 1;
   }
 
   return count;
+}
+
+function importPaymentPeriod(values) {
+  const periodResult = db.prepare(`
+    INSERT INTO payment_periods (effective_date, basic_salary)
+    VALUES (?, ?)
+    ON CONFLICT(effective_date) DO UPDATE SET basic_salary = excluded.basic_salary
+    RETURNING id
+  `).get(values.effectiveDate, values.basicSalary);
+  db.prepare("DELETE FROM payment_components WHERE payment_period_id = ?").run(periodResult.id);
+
+  const components = [
+    ["sector", "Sector", values.sectorRate, false],
+    ["ulv", "ULV", values.ulvRate, true],
+    ["palv", "PALV", values.palvRate, true],
+    ["ddo", "DDO", values.ddoRate, ratioMatches(values.ddoRate, values.basicSalary, [0.0075])],
+    ["snc", "SNC", values.sncRate, false],
+    ["loyalty", "Loyalty", values.loyaltyAmount, ratioMatches(values.loyaltyAmount, values.basicSalary, [0.1, 0.15])],
+    ["travel", "Travel costs", values.travelAmount, false],
+    ["wfly", "WFLY", values.wflyAmount, ratioMatches(values.wflyAmount, values.basicSalary, [0.0075, 0.01])],
+    ["pension", "Pension", values.pensionAmount, false]
+  ];
+  const insert = db.prepare(`
+    INSERT INTO payment_components (
+      payment_period_id, code, name, calculation_type, ratio, amount
+    ) VALUES (?, ?, ?, ?, ?, ?)
+  `);
+
+  for (const [code, name, value, isRatio] of components) {
+    insert.run(
+      periodResult.id, code, name, isRatio ? "ratio" : "fixed",
+      isRatio ? value / values.basicSalary : null,
+      isRatio ? null : value
+    );
+  }
+}
+
+function ratioMatches(value, basicSalary, ratios) {
+  if (!basicSalary) return false;
+  const ratio = value / basicSalary;
+  return ratios.some((expected) => Math.abs(ratio - expected) < 0.0000001);
 }
 
 function importOneOffPayments() {
