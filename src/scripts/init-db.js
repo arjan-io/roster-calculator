@@ -83,17 +83,31 @@ function migrateSalaryComponents() {
     const paymentPeriod = period.get(scale.effective_date);
     for (const [code, name, field] of fields) {
       const value = Number(scale[field] || 0);
-      const isRatio = paymentPeriod.basic_salary && Math.abs(value) < Math.abs(paymentPeriod.basic_salary);
+      const ratio = paymentPeriod.basic_salary ? value / paymentPeriod.basic_salary : null;
+      const isRatio = componentUsesRatio(code, ratio);
       insert.run(
         paymentPeriod.id,
         code,
         name,
         isRatio ? "ratio" : "fixed",
-        isRatio ? value / paymentPeriod.basic_salary : null,
+        isRatio ? ratio : null,
         isRatio ? null : value
       );
     }
   }
+}
+
+function componentUsesRatio(code, ratio) {
+  if (!Number.isFinite(ratio)) return false;
+  if (code === "ulv" || code === "palv") return true;
+  if (code === "ddo") return approximately(ratio, 0.0075);
+  if (code === "loyalty") return approximately(ratio, 0.1) || approximately(ratio, 0.15);
+  if (code === "wfly") return approximately(ratio, 0.0075) || approximately(ratio, 0.01);
+  return false;
+}
+
+function approximately(value, expected) {
+  return Math.abs(value - expected) < 0.0000001;
 }
 
 function tableExists(name) {
