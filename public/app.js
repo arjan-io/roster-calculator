@@ -24,10 +24,10 @@ $("#paid-toggle").addEventListener("click", () => {
   const paid = $("#duty-form [name='paid']").value !== "1";
   setPaidToggle(paid);
 });
-for (const button of $("[data-duty-filter]")) {
+for (const button of $$("[data-duty-filter]")) {
   button.addEventListener("click", () => {
     dutyFilter = button.dataset.dutyFilter;
-    $("[data-duty-filter]").forEach((item) => item.classList.toggle("active", item === button));
+    $$("[data-duty-filter]").forEach((item) => item.classList.toggle("active", item === button));
     renderDuties();
   });
 }
