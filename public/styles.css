@@ -92,6 +92,12 @@ input, select {
   color: var(--ink);
   padding: 0 10px;
 }
+.toolbar input[type="file"] {
+  width: auto;
+  max-width: 420px;
+  padding: 6px 8px;
+}
+
 input:focus, select:focus {
   outline: 2px solid rgba(8, 118, 108, .2);
   border-color: var(--accent);
@@ -105,12 +111,41 @@ button[type="submit"], #commit-button:not(:disabled) {
 }
 button[type="submit"]:hover, #commit-button:not(:disabled):hover { background: var(--accent-dark); }
 button:disabled { cursor: not-allowed; opacity: .5; }
-.secondary {
+.secondary, .toggle-button {
   min-height: 38px;
   border: 1px solid var(--line);
   background: white;
   padding: 0 14px;
 }
+.toggle-button {
+  width: 72px;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--muted);
+}
+.toggle-button.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+.table-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0;
+  margin: 0 0 8px;
+}
+.table-tools button {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  background: white;
+  padding: 0 12px;
+}
+.table-tools button + button { border-left: 0; }
+.table-tools button.active {
+  background: #e6f3f1;
+  color: var(--accent-dark);
+}
+
 .data-form {
   display: grid;
   grid-template-columns: repeat(4, minmax(120px, 1fr)) auto auto;
