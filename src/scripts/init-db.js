@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { db, transaction } from "../db/connection.js";
 import { recalculateFlightDistances } from "../services/airport.service.js";
+import { AIRPORT_ALIASES } from "../config/airportAliases.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,6 +28,10 @@ function migrateExistingTables() {
 
   if (tableExists("flights")) {
     addColumn("flights", "distance_nm", "REAL");
+  }
+
+  if (tableExists("misc_duties")) {
+    addColumn("misc_duties", "paid", "INTEGER NOT NULL DEFAULT 0");
   }
 }
 
@@ -53,7 +58,15 @@ function migrateExistingData() {
   `);
 
   migrateSalaryComponents();
-  db.exec("DROP TABLE IF EXISTS claims");
+  migrateAirportCodes();
+  db.exec(`
+    UPDATE misc_duties
+    SET paid = 1
+    WHERE lower(COALESCE(notes, '')) LIKE '%paid: ja%'
+       OR lower(COALESCE(notes, '')) LIKE '%paid: yes%';
+
+    DROP TABLE IF EXISTS claims;
+  `);
 }
 
 function migrateSalaryComponents() {
@@ -96,6 +109,23 @@ function migrateSalaryComponents() {
         isRatio ? null : value
       );
     }
+  }
+}
+
+function migrateAirportCodes() {
+  const findAirport = db.prepare("SELECT id FROM airports WHERE code = ? OR iata = ?");
+  const renameAirport = db.prepare("UPDATE airports SET code = ?, iata = ? WHERE id = ?");
+  const updateDeparture = db.prepare("UPDATE flights SET departure_airport = ? WHERE departure_airport = ?");
+  const updateArrival = db.prepare("UPDATE flights SET arrival_airport = ? WHERE arrival_airport = ?");
+
+  for (const [alias, canonical] of Object.entries(AIRPORT_ALIASES)) {
+    if (/^[A-Z]{3}$/.test(alias) && alias !== canonical) {
+      const oldAirport = findAirport.get(alias, alias);
+      const canonicalAirport = findAirport.get(canonical, canonical);
+      if (oldAirport && !canonicalAirport) renameAirport.run(canonical, canonical, oldAirport.id);
+    }
+    updateDeparture.run(canonical, alias);
+    updateArrival.run(canonical, alias);
   }
 }
 
