@@ -7,6 +7,7 @@ import { recalculateFlightDistances } from "../services/airport.service.js";
 
 const workbookPath = process.argv[2];
 const replaceExisting = process.argv.includes("--replace");
+const airportsOnly = process.argv.includes("--airports-only");
 
 if (!workbookPath) {
   console.error("Usage: npm run excel:import -- /path/to/Pay-calculator.xlsm --replace");
@@ -20,7 +21,11 @@ const workbook = xlsx.readFile(workbookPath, {
 
 const stats = transaction(() => {
   if (replaceExisting) {
-    clearExcelOwnedTables();
+    airportsOnly ? clearAirportTables() : clearExcelOwnedTables();
+  }
+
+  if (airportsOnly) {
+    return { airports: importAirports() };
   }
 
   return {
@@ -57,6 +62,13 @@ function normalizeFlightsFromAirportAliases() {
       )
     `);
   }
+}
+
+function clearAirportTables() {
+  db.exec(`
+    DELETE FROM airport_aliases;
+    DELETE FROM airports;
+  `);
 }
 
 function clearExcelOwnedTables() {
