@@ -164,8 +164,8 @@ function importMiscDuties() {
     ON CONFLICT(code) DO NOTHING
   `);
   const insert = db.prepare(`
-    INSERT INTO misc_duties (duty_date, duty_type_id, notes)
-    VALUES (?, ?, ?)
+    INSERT INTO misc_duties (duty_date, duty_type_id, paid, notes)
+    VALUES (?, ?, ?, NULL)
   `);
 
   let count = 0;
@@ -178,7 +178,8 @@ function importMiscDuties() {
 
     insertDutyType.run(dutyCode, dutyCode);
     const dutyType = selectDuty.get(dutyCode);
-    insert.run(dutyDate, dutyType.id, clean(row.betaald) ? `Paid: ${clean(row.betaald)}` : "");
+    const paidText = clean(row.betaald).toLowerCase();
+    insert.run(dutyDate, dutyType.id, ["ja", "yes", "true", "1"].includes(paidText) ? 1 : 0);
     count += 1;
   }
 
