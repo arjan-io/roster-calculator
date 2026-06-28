@@ -65,6 +65,13 @@ const insertFlight = db.prepare(`
   )
 `);
 
+const findExcludedFlight = db.prepare(`
+  SELECT id
+  FROM excluded_flights
+  WHERE source_fingerprint = ? OR operational_key = ?
+  LIMIT 1
+`);
+
 const findFlightByFingerprint = db.prepare(`
   SELECT id, display_code AS displayCode
   FROM flights
@@ -173,6 +180,11 @@ export function listImportBatches() {
 }
 
 function findDuplicateFlight(flight) {
+  const excluded = findExcludedFlight.get(flight.sourceFingerprint, getOperationalDuplicateKey(flight));
+  if (excluded) {
+    return { id: null, excluded: true };
+  }
+
   const fingerprintMatch = findFlightByFingerprint.get(flight.sourceFingerprint);
   if (fingerprintMatch) {
     return fingerprintMatch;
