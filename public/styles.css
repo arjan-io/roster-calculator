@@ -158,13 +158,31 @@ button:disabled { cursor: not-allowed; opacity: .5; }
 }
 .data-form label { display: grid; gap: 6px; color: var(--muted); font-size: 13px; }
 .data-form .wide { grid-column: span 2; }
-.payment-form { grid-template-columns: 180px 180px 1fr auto auto auto; }
-.component-editor { display: grid; gap: 8px; }
-.component-row {
-  display: grid;
-  grid-template-columns: minmax(140px, 1fr) 180px 110px 110px 38px;
-  gap: 8px;
+.payment-form { grid-template-columns: 180px 180px auto auto auto; }
+.payment-form .component-editor {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  align-items: start;
+  padding-bottom: 4px;
 }
+.component-column {
+  flex: 0 0 190px;
+  display: grid;
+  grid-template-rows: repeat(4, 38px);
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: var(--band);
+  position: relative;
+}
+.component-column .icon-button {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+.component-column [name="componentName"] { padding-right: 38px; }
 .section-heading {
   display: flex;
   align-items: end;
@@ -213,6 +231,27 @@ tr.duplicate td { color: #9a3412; background: var(--warning-bg); }
 }
 .icon-button:hover { border-color: var(--line); background: var(--band); }
 .icon-button.danger { color: var(--danger); }
+.paid-status {
+  color: var(--accent-dark);
+  font-weight: bold;
+}
+.paid-status span {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: white;
+}
+.text-action {
+  border: 0;
+  background: transparent;
+  color: var(--accent-dark);
+  padding: 4px;
+  text-decoration: underline;
+}
 .issues-list { display: grid; gap: 8px; }
 .issue-row {
   display: grid;
@@ -234,10 +273,11 @@ tr.duplicate td { color: #9a3412; background: var(--warning-bg); }
   main { padding: 18px; }
   .data-form, .payment-form { grid-template-columns: 1fr 1fr; }
   .data-form .wide { grid-column: 1 / -1; }
-  .component-row { grid-template-columns: 1fr 1fr; }
+  .component-editor { flex-direction: column; }
+  .component-column { width: 100%; flex-basis: auto; }
 }
 @media (max-width: 600px) {
-  .summary-grid, .data-form, .payment-form, .component-row { grid-template-columns: 1fr; }
+  .summary-grid, .data-form, .payment-form { grid-template-columns: 1fr; }
   .data-form .wide { grid-column: auto; }
   .issue-row { grid-template-columns: 1fr; }
 }
