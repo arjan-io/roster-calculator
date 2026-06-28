@@ -67,6 +67,17 @@ const insertFlight = db.prepare(`
   )
 `);
 
+const findCanonicalAirport = db.prepare(`
+  SELECT COALESCE(airports.iata, airports.code) AS code
+  FROM airports
+  LEFT JOIN airport_aliases ON airport_aliases.airport_id = airports.id
+  WHERE airports.code = @code
+     OR airports.iata = @code
+     OR airports.icao = @code
+     OR airport_aliases.alias = @code
+  LIMIT 1
+`);
+
 const findExcludedFlight = db.prepare(`
   SELECT id
   FROM excluded_flights
@@ -105,6 +116,7 @@ export function previewImport(flights) {
   const seenOperationalKeys = new Set();
 
   return flights.map((flight) => {
+    flight = normalizeFlightAirports(flight);
     const operationalKey = getOperationalDuplicateKey(flight);
     const duplicateInImport =
       seenFingerprints.has(flight.sourceFingerprint) ||
@@ -186,6 +198,19 @@ export function listImportBatches() {
     FROM import_batches
     ORDER BY imported_at DESC, id DESC
   `).all();
+}
+
+function normalizeFlightAirports(flight) {
+  return {
+    ...flight,
+    departureAirport: resolveAirport(flight.departureAirport),
+    arrivalAirport: resolveAirport(flight.arrivalAirport)
+  };
+}
+
+function resolveAirport(value) {
+  const code = canonicalAirportCode(value);
+  return findCanonicalAirport.get({ code })?.code || code;
 }
 
 function findDuplicateFlight(flight) {
