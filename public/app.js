@@ -62,36 +62,63 @@ $("#component-editor").addEventListener("change", (event) => {
 async function previewImport(event) {
   event.preventDefault();
   const status = $("#preview-status");
-  status.textContent = "Reading file...";
-  $("#commit-button").disabled = true;
-  const response = await fetch("/api/imports/preview", { method: "POST", body: new FormData(event.target) });
-  const result = await response.json();
+  pendingImport = null;
+  renderPreview([]);
+  setImportBusy(true, "Checking roster and duplicates...");
 
-  if (!response.ok) {
-    status.textContent = result.error || "Could not read file.";
-    pendingImport = null;
+  try {
+    const response = await fetch("/api/imports/preview", {
+      method: "POST",
+      body: new FormData(event.target)
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Could not read file.");
+    }
+
+    pendingImport = result;
+    const duplicateCount = result.flights.filter((flight) => flight.duplicate).length;
+    status.textContent = formatImportStatus(result.rowCount, duplicateCount, result.skippedBeforeCutoff);
+    renderPreview(result.flights);
+  } catch (error) {
+    status.textContent = error.message;
     renderPreview([]);
-    return;
+  } finally {
+    setImportBusy(false);
   }
-
-  pendingImport = result;
-  const duplicateCount = result.flights.filter((flight) => flight.duplicate).length;
-  status.textContent = formatImportStatus(result.rowCount, duplicateCount, result.skippedBeforeCutoff);
-  $("#commit-button").disabled = result.flights.length === 0;
-  renderPreview(result.flights);
 }
 
 async function commitImport() {
   if (!pendingImport) return;
-  const response = await api("/api/imports/commit", {
-    method: "POST",
-    body: JSON.stringify({ previewToken: pendingImport.previewToken })
-  });
-  $("#preview-status").textContent =
-    `${response.insertedCount} inserted, ${response.duplicateCount} duplicates skipped, ${response.skippedBeforeCutoff || 0} before cutoff skipped.`;
-  pendingImport = null;
-  $("#commit-button").disabled = true;
-  await loadAll();
+  const status = $("#preview-status");
+  setImportBusy(true, "Saving new flights...");
+
+  try {
+    const response = await api("/api/imports/commit", {
+      method: "POST",
+      body: JSON.stringify({ previewToken: pendingImport.previewToken })
+    });
+    status.textContent =
+      `${response.insertedCount} inserted, ${response.duplicateCount} duplicates skipped, ${response.skippedBeforeCutoff || 0} before cutoff skipped.`;
+    pendingImport = null;
+    $("#import-form").reset();
+    renderPreview([]);
+    await loadAll();
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    setImportBusy(false);
+  }
+}
+
+function setImportBusy(isBusy, message = "Working...") {
+  $("#roster-file").disabled = isBusy;
+  $("#preview-button").disabled = isBusy;
+  $("#commit-button").disabled = isBusy || !pendingImport;
+  $("#import-loading").classList.toggle("hidden", !isBusy);
+  $("#import-loading-text").textContent = message;
+  $("#import-form").setAttribute("aria-busy", String(isBusy));
 }
 
 async function saveAirport(event) {
