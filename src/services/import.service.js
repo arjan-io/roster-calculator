@@ -108,11 +108,11 @@ export function previewImport(flights) {
     const operationalKey = getOperationalDuplicateKey(flight);
     const duplicateInImport =
       seenFingerprints.has(flight.sourceFingerprint) ||
-      seenOperationalKeys.has(operationalKey);
+      Boolean(operationalKey && seenOperationalKeys.has(operationalKey));
     const existing = duplicateInImport ? { id: null } : findDuplicateFlight(flight);
 
     seenFingerprints.add(flight.sourceFingerprint);
-    seenOperationalKeys.add(operationalKey);
+    if (operationalKey) seenOperationalKeys.add(operationalKey);
 
     return {
       ...flight,
@@ -226,6 +226,7 @@ function findDuplicateFlight(flight) {
 }
 
 function getOperationalDuplicateKey(flight) {
+  if (!flight.departureTime && !flight.arrivalTime) return null;
   return [
     flight.flightDate,
     flight.aircraftRegistration,
