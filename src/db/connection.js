@@ -13,6 +13,14 @@ fs.mkdirSync(dataDir, { recursive: true });
 export const db = new Database(databasePath);
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
+db.exec(`
+  CREATE TABLE IF NOT EXISTS excluded_flights (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_fingerprint TEXT NOT NULL UNIQUE,
+    operational_key TEXT UNIQUE,
+    deleted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )
+`);
 
 export function transaction(fn) {
   return db.transaction(fn);
