@@ -1,5 +1,5 @@
 import express from "express";
-import { getFlightSummary, listFlights } from "../services/flight.service.js";
+import { deleteFlight, getFlightSummary, listFlights } from "../services/flight.service.js";
 
 const router = express.Router();
 
@@ -11,8 +11,13 @@ router.get("/", (req, res) => {
   }));
 });
 
+router.delete("/:id", (req, res, next) => {
+  try { res.json(deleteFlight(req.params.id)); } catch (error) { next(error); }
+});
+
 router.get("/summary", (_req, res) => {
   res.json(getFlightSummary());
 });
 
+router.use((error, _req, res, _next) => res.status(400).json({ error: error.message }));
 export default router;
