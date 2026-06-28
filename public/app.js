@@ -3,6 +3,7 @@ let airports = [];
 let duties = [];
 let paymentPeriods = [];
 let dutyFilter = "all";
+let activeFlightFilter = null;
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -19,7 +20,11 @@ $("#commit-button").addEventListener("click", commitImport);
 $("#airport-form").addEventListener("submit", saveAirport);
 $("#duty-form").addEventListener("submit", saveDuty);
 $("#payment-period-form").addEventListener("submit", savePaymentPeriod);
-$("#add-component").addEventListener("click", () => addComponentRow());
+$("#add-component").addEventListener("click", () => addComponentColumn());
+$("#clear-flight-filter").addEventListener("click", async () => {
+  activeFlightFilter = null;
+  await loadFlights();
+});
 $("#paid-toggle").addEventListener("click", () => {
   const paid = $("#duty-form [name='paid']").value !== "1";
   setPaidToggle(paid);
@@ -44,7 +49,7 @@ $("#duties-body").addEventListener("click", handleDutyAction);
 $("#payment-periods-body").addEventListener("click", handlePaymentAction);
 $("#component-editor").addEventListener("click", (event) => {
   if (event.target.closest("[data-remove-component]")) {
-    event.target.closest(".component-row").remove();
+    event.target.closest(".component-column").remove();
   }
 });
 
@@ -116,7 +121,7 @@ async function savePaymentPeriod(event) {
   event.preventDefault();
   const form = event.target;
   const fields = Object.fromEntries(new FormData(form));
-  const components = $$(".component-row", $("#component-editor")).map((row) => ({
+  const components = $(".component-column", $("#component-editor")).map((row) => ({
     code: $("[name='componentCode']", row).value,
     name: $("[name='componentName']", row).value,
     calculationType: $("[name='calculationType']", row).value,
@@ -140,6 +145,11 @@ async function handleAirportAction(event) {
   const button = event.target.closest("[data-action]");
   if (!button) return;
   const airport = airports.find((item) => item.id === Number(button.dataset.id));
+  if (button.dataset.action === "mark-paid") {
+    await api(`/api/duties/${duty.id}/paid`, { method: "PATCH" });
+    await loadDuties();
+    return;
+  }
   if (button.dataset.action === "edit") {
     fillForm($("#airport-form"), {
       id: airport.id, iata: airport.iata, icao: airport.icao || "",
@@ -190,12 +200,23 @@ async function handlePaymentAction(event) {
 }
 
 async function loadDashboard() {
-  const [summary, flights] = await Promise.all([api("/api/flights/summary"), api("/api/flights?limit=50")]);
+  const summary = await api("/api/flights/summary");
   $("#total-flights").textContent = summary.totalFlights || 0;
   $("#date-range").textContent = summary.firstDate && summary.lastDate ? `${summary.firstDate} - ${summary.lastDate}` : "-";
   $("#total-time").textContent = minutesToDuration(summary.totalMinutes || 0);
+  await loadFlights(activeFlightFilter);
+}
+
+async function loadFlights(filter = null) {
+  const parameters = new URLSearchParams({ limit: filter ? "1000" : "50" });
+  if (filter?.flightFilter) parameters.set("issue", filter.flightFilter);
+  if (filter?.airport) parameters.set("airport", filter.airport);
+  const flights = await api(`/api/flights?${parameters}`);
+
+  $("#flights-heading").textContent = filter ? `Affected flights: ${filter.label}` : "Recent flights";
+  $("#clear-flight-filter").classList.toggle("hidden", !filter);
   $("#flights-body").replaceChildren(...flights.map((flight) => tableRow([
-    flight.flightDate, flight.flightNumber || "-", `${flight.departureAirport} -> ${flight.arrivalAirport}`,
+    flight.flightDate, flight.flightNumber || "-", `${flight.departureAirport || "(blank)"} -> ${flight.arrivalAirport || "(blank)"}`,
     `${flight.departureTime || "-"} - ${flight.arrivalTime || "-"}`,
     flight.aircraftType || "-", flight.aircraftRegistration || "-",
     flight.distanceNm == null ? "Missing airport" : `${Math.round(flight.distanceNm)} nm`,
@@ -222,13 +243,24 @@ async function loadDuties() {
 
 async function loadPaymentPeriods() {
   paymentPeriods = await api("/api/payments/periods");
-  $("#payment-periods-body").replaceChildren(...paymentPeriods.map((period) => actionRow([
-    period.effectiveDate,
-    money(period.basicSalary),
-    period.components.map((item) =>
-      item.calculationType === "ratio" ? `${item.name}: ${item.ratio}` : `${item.name}: ${money(item.amount)}`
-    ).join(", ")
-  ], period.id)));
+  const definitions = new Map();
+  for (const period of [...paymentPeriods].reverse()) {
+    for (const component of period.components) {
+      if (!definitions.has(component.code)) definitions.set(component.code, component.name);
+    }
+  }
+
+  const header = tableRow(["Effective from", "Basic salary", ...definitions.values(), "Actions", ""]);
+  $("#payment-periods-head").replaceChildren(header);
+  $("#payment-periods-body").replaceChildren(...paymentPeriods.map((period) => {
+    const byCode = new Map(period.components.map((component) => [component.code, component]));
+    const values = [period.effectiveDate, money(period.basicSalary)];
+    for (const code of definitions.keys()) {
+      const component = byCode.get(code);
+      values.push(component ? formatPaymentComponent(component) : "-");
+    }
+    return actionRow(values, period.id);
+  }));
 }
 
 async function loadIssues() {
@@ -248,6 +280,10 @@ async function loadIssues() {
       const page = rosterTarget ? "roster" : "data";
       showPage(page);
       showPanel($(`[data-page='${page}']`), issue.target);
+      if (issue.flightFilter) {
+        activeFlightFilter = issue;
+        loadFlights(issue);
+      }
     });
     return button;
   }));
@@ -259,9 +295,19 @@ function renderDuties() {
     (dutyFilter === "paid" && duty.paid) ||
     (dutyFilter === "unpaid" && !duty.paid)
   );
-  $("#duties-body").replaceChildren(...filtered.map((duty) =>
-    actionRow([duty.dutyDate, duty.dutyName, duty.paid ? "Yes" : "No"], duty.id)
-  ));
+  $("#duties-body").replaceChildren(...filtered.map(dutyRow));
+}
+
+function dutyRow(duty) {
+  const tr = tableRow([duty.dutyDate, duty.dutyName]);
+  const paidCell = document.createElement("td");
+  if (duty.paid) {
+    paidCell.innerHTML = '<span class="paid-status"><span aria-hidden="true">&#10003;</span> Yes</span>';
+  } else {
+    paidCell.innerHTML = `<span>No</span> <button class="text-action" data-action="mark-paid" data-id="${duty.id}">Mark as paid</button>`;
+  }
+  tr.append(paidCell, iconCell("&#9998;", "Edit", "edit", duty.id), iconCell("&times;", "Delete", "delete", duty.id, true));
+  return tr;
 }
 
 function renderPreview(flights) {
@@ -275,10 +321,10 @@ function renderPreview(flights) {
 
 function renderComponentEditor(components = []) {
   $("#component-editor").replaceChildren();
-  for (const component of components) addComponentRow(component);
+  for (const component of components) addComponentColumn(component);
 }
 
-function addComponentRow(component = {}) {
+function addComponentColumn(component = {}) {
   const row = document.createElement("div");
   row.className = "component-row";
   row.innerHTML = `
@@ -380,6 +426,12 @@ function formatImportStatus(rows, duplicates, skipped = 0) {
   const parts = [`${rows} importable rows found`, `${duplicates} duplicates`];
   if (skipped) parts.push(`${skipped} before 2011-06-01 skipped`);
   return `${parts.join(", ")}.`;
+}
+function formatPaymentComponent(component) {
+  if (component.calculationType === "ratio") {
+    return new Intl.NumberFormat("en-NL", { style: "percent", maximumFractionDigits: 4 }).format(component.ratio || 0);
+  }
+  return money(component.amount);
 }
 function money(value) {
   return new Intl.NumberFormat("en-NL", { style: "currency", currency: "EUR" }).format(Number(value || 0));
