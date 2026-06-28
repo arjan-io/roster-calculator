@@ -38,6 +38,12 @@ export function saveMiscDuty({ id, dutyDate, dutyTypeId, paid }) {
   return { saved: true };
 }
 
+export function markMiscDutyPaid(id) {
+  const result = db.prepare("UPDATE misc_duties SET paid = 1 WHERE id = ?").run(Number(id));
+  if (!result.changes) throw new Error("Duty not found.");
+  return { paid: true };
+}
+
 export function deleteMiscDuty(id) {
   const result = db.prepare("DELETE FROM misc_duties WHERE id = ?").run(Number(id));
   if (!result.changes) throw new Error("Duty not found.");
