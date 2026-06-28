@@ -53,9 +53,8 @@ export const deleteFlight = transaction((id) => {
   if (!flight) throw new Error("Flight not found.");
 
   db.prepare(`
-    INSERT INTO excluded_flights (source_fingerprint, operational_key)
+    INSERT OR IGNORE INTO excluded_flights (source_fingerprint, operational_key)
     VALUES (?, ?)
-    ON CONFLICT(source_fingerprint) DO NOTHING
   `).run(flight.sourceFingerprint, operationalKey(flight));
   db.prepare("DELETE FROM flights WHERE id = ?").run(flight.id);
 
