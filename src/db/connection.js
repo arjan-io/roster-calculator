@@ -51,13 +51,20 @@ function migrateFlightIdentity() {
           OR trim(COALESCE(arrival_time, '')) <> ''
         );
 
-      DELETE FROM flights
-      WHERE operational_key IS NOT NULL
-        AND id NOT IN (
-          SELECT MIN(id)
-          FROM flights
-          WHERE operational_key IS NOT NULL
-          GROUP BY operational_key
+      DELETE FROM flights AS duplicate
+      WHERE duplicate.operational_key IS NOT NULL
+        AND duplicate.id <> (
+          SELECT candidate.id
+          FROM flights AS candidate
+          WHERE candidate.operational_key = duplicate.operational_key
+          ORDER BY
+            CASE candidate.source_format
+              WHEN 'safelog_csv' THEN 0
+              WHEN 'airline_export_csv' THEN 1
+              ELSE 2
+            END,
+            candidate.id
+          LIMIT 1
         );
 
       CREATE UNIQUE INDEX IF NOT EXISTS idx_flights_operational_key
