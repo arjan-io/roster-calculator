@@ -37,6 +37,7 @@ const insertFlight = db.prepare(`
     source_file_name,
     source_row_number,
     source_fingerprint,
+    operational_key,
     raw_json
   )
   VALUES (
@@ -61,6 +62,7 @@ const insertFlight = db.prepare(`
     @sourceFileName,
     @sourceRowNumber,
     @sourceFingerprint,
+    @operationalKey,
     @rawJson
   )
 `);
@@ -76,6 +78,12 @@ const findFlightByFingerprint = db.prepare(`
   SELECT id, display_code AS displayCode
   FROM flights
   WHERE source_fingerprint = ?
+`);
+
+const findFlightByOperationalKey = db.prepare(`
+  SELECT id, display_code AS displayCode
+  FROM flights
+  WHERE operational_key = ?
 `);
 
 const findOperationalCandidates = db.prepare(`
@@ -144,6 +152,7 @@ export const commitImport = transaction(({ sourceFormat, originalFileName, fligh
     insertFlight.run({
       ...flight,
       importBatchId: batch.lastInsertRowid,
+      operationalKey: getOperationalDuplicateKey(flight),
       rawJson: JSON.stringify(flight.raw)
     });
     insertedCount += 1;
@@ -183,6 +192,11 @@ function findDuplicateFlight(flight) {
   const excluded = findExcludedFlight.get(flight.sourceFingerprint, getOperationalDuplicateKey(flight));
   if (excluded) {
     return { id: null, excluded: true };
+  }
+
+  const operationalMatch = findFlightByOperationalKey.get(getOperationalDuplicateKey(flight));
+  if (operationalMatch) {
+    return operationalMatch;
   }
 
   const fingerprintMatch = findFlightByFingerprint.get(flight.sourceFingerprint);
