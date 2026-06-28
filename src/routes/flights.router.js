@@ -4,8 +4,11 @@ import { getFlightSummary, listFlights } from "../services/flight.service.js";
 const router = express.Router();
 
 router.get("/", (req, res) => {
-  const limit = Number(req.query.limit || 100);
-  res.json(listFlights({ limit }));
+  res.json(listFlights({
+    limit: req.query.limit,
+    issue: req.query.issue,
+    airport: req.query.airport
+  }));
 });
 
 router.get("/summary", (_req, res) => {
