@@ -21,6 +21,7 @@ export function parseSafeLogCsv(text, fileName = "") {
 
   return records
     .filter((record) => clean(record.Date))
+    .filter((record) => durationToMinutes(record["Simulator Sim.Time"]) === 0)
     .map((record, index) => normalizeSafeLogRecord(record, index + 2, fileName));
 }
 
