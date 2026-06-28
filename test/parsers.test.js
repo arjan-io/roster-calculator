@@ -36,6 +36,15 @@ assert.equal(safeLogFlight.departureTimeZone, "UTC");
 assert.equal(safeLogFlight.flightTimeMinutes, 188);
 assert.equal(safeLogFlight.displayCode, "20260625-AMS-MLA-1219");
 
+const safeLogHeaders = safelog.trim().split("\n")[0].split(";");
+const simulatorRow = Array(safeLogHeaders.length).fill("");
+simulatorRow[safeLogHeaders.indexOf("Date")] = "2026-06-26";
+simulatorRow[safeLogHeaders.indexOf("Aircraft Type")] = "A320";
+simulatorRow[safeLogHeaders.indexOf("Simulator Sim.Type")] = "A320 FFS";
+simulatorRow[safeLogHeaders.indexOf("Simulator Sim.Time")] = "4:00";
+const simulatorCsv = `${safeLogHeaders.join(";")}\n${simulatorRow.join(";")}\n`;
+assert.equal(parseSafeLogCsv(simulatorCsv, "safelog.csv").length, 0);
+
 const filtered = parseRosterFile(Buffer.from(safelogWithOldFlight), "safelog.csv");
 assert.equal(filtered.flights.length, 1);
 assert.equal(filtered.flights[0].flightDate, "2011-06-01");
