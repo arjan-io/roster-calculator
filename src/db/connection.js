@@ -22,6 +22,51 @@ db.exec(`
   )
 `);
 
+migrateFlightIdentity();
+
+function migrateFlightIdentity() {
+  const flightsTable = db.prepare(
+    "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'flights'"
+  ).get();
+  if (!flightsTable) return;
+
+  const columns = db.prepare("PRAGMA table_info(flights)").all();
+  if (!columns.some((column) => column.name === "operational_key")) {
+    db.exec("ALTER TABLE flights ADD COLUMN operational_key TEXT");
+  }
+
+  db.transaction(() => {
+    db.exec(`
+      UPDATE flights
+      SET operational_key =
+        trim(flight_date) || '|' ||
+        upper(trim(COALESCE(aircraft_registration, ''))) || '|' ||
+        upper(trim(COALESCE(departure_airport, ''))) || '|' ||
+        trim(COALESCE(departure_time, '')) || '|' ||
+        upper(trim(COALESCE(arrival_airport, ''))) || '|' ||
+        trim(COALESCE(arrival_time, ''))
+      WHERE operational_key IS NULL
+        AND (
+          trim(COALESCE(departure_time, '')) <> ''
+          OR trim(COALESCE(arrival_time, '')) <> ''
+        );
+
+      DELETE FROM flights
+      WHERE operational_key IS NOT NULL
+        AND id NOT IN (
+          SELECT MIN(id)
+          FROM flights
+          WHERE operational_key IS NOT NULL
+          GROUP BY operational_key
+        );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_flights_operational_key
+      ON flights (operational_key)
+      WHERE operational_key IS NOT NULL;
+    `);
+  })();
+}
+
 export function transaction(fn) {
   return db.transaction(fn);
 }
