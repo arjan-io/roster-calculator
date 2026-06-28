@@ -250,7 +250,7 @@ async function loadPaymentPeriods() {
     }
   }
 
-  const header = tableRow(["Effective from", "Basic salary", ...definitions.values(), "Actions", ""]);
+  const header = tableHeader(["Effective from", "Basic salary", ...definitions.values(), "Actions", ""]);
   $("#payment-periods-head").replaceChildren(header);
   $("#payment-periods-body").replaceChildren(...paymentPeriods.map((period) => {
     const byCode = new Map(period.components.map((component) => [component.code, component]));
@@ -326,7 +326,7 @@ function renderComponentEditor(components = []) {
 
 function addComponentColumn(component = {}) {
   const row = document.createElement("div");
-  row.className = "component-row";
+  row.className = "component-column";
   row.innerHTML = `
     <input name="componentCode" type="hidden" value="${escapeHtml(component.code || "")}">
     <input name="componentName" placeholder="Component name" value="${escapeHtml(component.name || "")}" required>
@@ -384,6 +384,15 @@ function iconCell(symbol, title, action, id, danger = false) {
   td.className = "action-cell";
   td.innerHTML = `<button class="icon-button ${danger ? "danger" : ""}" data-action="${action}" data-id="${id}" title="${title}" aria-label="${title}">${symbol}</button>`;
   return td;
+}
+function tableHeader(values) {
+  const tr = document.createElement("tr");
+  for (const value of values) {
+    const th = document.createElement("th");
+    th.textContent = value;
+    tr.append(th);
+  }
+  return tr;
 }
 function tableRow(values, duplicate = false) {
   const tr = document.createElement("tr");
