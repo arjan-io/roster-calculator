@@ -10,8 +10,7 @@
     "db:init": "node src/scripts/init-db.js",
     "db:normalize": "node src/scripts/normalize-existing-data.js",
     "excel:import": "node src/scripts/import-excel-data.js",
-    "test:parsers": "node test/parsers.test.js",
-    "cleanup:missing-airports": "node src/scripts/remove-missing-airport-flights.js"
+    "test:parsers": "node test/parsers.test.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0",
