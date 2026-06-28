@@ -40,7 +40,7 @@ function migrateFlightIdentity() {
   const version = db.prepare(
     "SELECT value FROM app_meta WHERE key = 'flight_identity_version'"
   ).get()?.value;
-  if (version === "2") return;
+  if (version === "3") return;
 
   const beforeCount = db.prepare("SELECT COUNT(*) AS count FROM flights").get().count;
   db.transaction(() => {
@@ -110,14 +110,20 @@ function migrateFlightIdentity() {
       WHERE operational_key IS NOT NULL;
 
       INSERT INTO app_meta (key, value)
-      VALUES ('flight_identity_version', '2')
+      VALUES ('flight_identity_version', '3')
       ON CONFLICT(key) DO UPDATE SET value = excluded.value;
     `);
   })();
 
   const afterCount = db.prepare("SELECT COUNT(*) AS count FROM flights").get().count;
+  const unresolvedCount = db.prepare(`
+    SELECT COUNT(*) AS count
+    FROM flights
+    WHERE length(trim(COALESCE(departure_airport, ''))) <> 3
+       OR length(trim(COALESCE(arrival_airport, ''))) <> 3
+  `).get().count;
   console.log(
-    `Flight identity migration complete: ${beforeCount - afterCount} duplicate flights consolidated.`
+    `Flight identity migration complete: ${beforeCount - afterCount} duplicates consolidated; ${unresolvedCount} non-IATA flights remain.`
   );
 }
 
