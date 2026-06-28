@@ -1,4 +1,5 @@
-import { db } from "../db/connection.js";
+import { db, transaction } from "../db/connection.js";
+import { canonicalAirportCode } from "../utils/airportCodes.js";
 
 export function listFlights({ limit = 100, issue, airport } = {}) {
   const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 1000);
@@ -34,6 +35,33 @@ export function listFlights({ limit = 100, issue, airport } = {}) {
   `).all(...parameters, safeLimit);
 }
 
+export const deleteFlight = transaction((id) => {
+  const flight = db.prepare(`
+    SELECT
+      id,
+      flight_date AS flightDate,
+      aircraft_registration AS aircraftRegistration,
+      departure_airport AS departureAirport,
+      departure_time AS departureTime,
+      arrival_airport AS arrivalAirport,
+      arrival_time AS arrivalTime,
+      source_fingerprint AS sourceFingerprint
+    FROM flights
+    WHERE id = ?
+  `).get(Number(id));
+
+  if (!flight) throw new Error("Flight not found.");
+
+  db.prepare(`
+    INSERT INTO excluded_flights (source_fingerprint, operational_key)
+    VALUES (?, ?)
+    ON CONFLICT(source_fingerprint) DO NOTHING
+  `).run(flight.sourceFingerprint, operationalKey(flight));
+  db.prepare("DELETE FROM flights WHERE id = ?").run(flight.id);
+
+  return { deleted: true };
+});
+
 export function getFlightSummary() {
   return db.prepare(`
     SELECT
@@ -43,4 +71,15 @@ export function getFlightSummary() {
       SUM(COALESCE(flight_time_minutes, 0)) AS totalMinutes
     FROM flights
   `).get();
+}
+
+function operationalKey(flight) {
+  return [
+    flight.flightDate,
+    flight.aircraftRegistration,
+    canonicalAirportCode(flight.departureAirport),
+    flight.departureTime,
+    canonicalAirportCode(flight.arrivalAirport),
+    flight.arrivalTime
+  ].join("|");
 }
