@@ -52,6 +52,11 @@ $("#component-editor").addEventListener("click", (event) => {
     event.target.closest(".component-column").remove();
   }
 });
+$("#component-editor").addEventListener("change", (event) => {
+  if (event.target.name === "calculationType") {
+    updateComponentColumn(event.target.closest(".component-column"));
+  }
+});
 
 async function previewImport(event) {
   event.preventDefault();
@@ -339,6 +344,13 @@ function addComponentColumn(component = {}) {
     <button class="icon-button danger" type="button" data-remove-component title="Remove component">&times;</button>
   `;
   $("#component-editor").append(row);
+  updateComponentColumn(row);
+}
+
+function updateComponentColumn(column) {
+  const isRatio = $("[name='calculationType']", column).value === "ratio";
+  $("[name='ratio']", column).classList.toggle("hidden", !isRatio);
+  $("[name='amount']", column).classList.toggle("hidden", isRatio);
 }
 
 async function resetPaymentForm() {
