@@ -35,6 +35,7 @@ function migrateFlightIdentity() {
     db.exec("ALTER TABLE flights ADD COLUMN operational_key TEXT");
   }
 
+  const beforeCount = db.prepare("SELECT COUNT(*) AS count FROM flights").get().count;
   db.transaction(() => {
     db.exec(`
       UPDATE flights
@@ -72,6 +73,11 @@ function migrateFlightIdentity() {
       WHERE operational_key IS NOT NULL;
     `);
   })();
+
+  const afterCount = db.prepare("SELECT COUNT(*) AS count FROM flights").get().count;
+  if (beforeCount > afterCount) {
+    console.log(`Consolidated ${beforeCount - afterCount} exact duplicate flights.`);
+  }
 }
 
 export function transaction(fn) {
