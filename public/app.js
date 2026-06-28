@@ -145,11 +145,6 @@ async function handleAirportAction(event) {
   const button = event.target.closest("[data-action]");
   if (!button) return;
   const airport = airports.find((item) => item.id === Number(button.dataset.id));
-  if (button.dataset.action === "mark-paid") {
-    await api(`/api/duties/${duty.id}/paid`, { method: "PATCH" });
-    await loadDuties();
-    return;
-  }
   if (button.dataset.action === "edit") {
     fillForm($("#airport-form"), {
       id: airport.id, iata: airport.iata, icao: airport.icao || "",
@@ -172,6 +167,11 @@ async function handleDutyAction(event) {
   const button = event.target.closest("[data-action]");
   if (!button) return;
   const duty = duties.find((item) => item.id === Number(button.dataset.id));
+  if (button.dataset.action === "mark-paid") {
+    await api(`/api/duties/${duty.id}/paid`, { method: "PATCH" });
+    await loadDuties();
+    return;
+  }
   if (button.dataset.action === "edit") {
     fillForm($("#duty-form"), duty);
     setPaidToggle(Boolean(duty.paid));
