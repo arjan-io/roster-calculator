@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS flights (
   source_file_name TEXT,
   source_row_number INTEGER,
   source_fingerprint TEXT NOT NULL UNIQUE,
+  operational_key TEXT,
   raw_json TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (import_batch_id) REFERENCES import_batches(id)
@@ -143,6 +144,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_airports_iata_unique
   ON airports (iata) WHERE iata IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_airports_icao_unique
   ON airports (icao) WHERE icao IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_flights_operational_key
+  ON flights (operational_key) WHERE operational_key IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_flights_route
   ON flights (departure_airport, arrival_airport);
 CREATE INDEX IF NOT EXISTS idx_misc_duties_date
