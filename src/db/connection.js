@@ -19,38 +19,75 @@ db.exec(`
     source_fingerprint TEXT NOT NULL UNIQUE,
     operational_key TEXT UNIQUE,
     deleted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  )
+  );
+
+  CREATE TABLE IF NOT EXISTS app_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
 `);
 
 migrateFlightIdentity();
 
 function migrateFlightIdentity() {
-  const flightsTable = db.prepare(
-    "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'flights'"
-  ).get();
-  if (!flightsTable) return;
+  if (!tableExists("flights")) return;
 
   const columns = db.prepare("PRAGMA table_info(flights)").all();
   if (!columns.some((column) => column.name === "operational_key")) {
     db.exec("ALTER TABLE flights ADD COLUMN operational_key TEXT");
   }
 
+  const version = db.prepare(
+    "SELECT value FROM app_meta WHERE key = 'flight_identity_version'"
+  ).get()?.value;
+  if (version === "2") return;
+
   const beforeCount = db.prepare("SELECT COUNT(*) AS count FROM flights").get().count;
   db.transaction(() => {
+    db.exec("DROP INDEX IF EXISTS idx_flights_operational_key");
+
+    if (tableExists("airports") && tableExists("airport_aliases")) {
+      db.exec(`
+        UPDATE flights
+        SET departure_airport = COALESCE((
+          SELECT COALESCE(airports.iata, airports.code)
+          FROM airports
+          LEFT JOIN airport_aliases ON airport_aliases.airport_id = airports.id
+          WHERE airports.code = flights.departure_airport
+             OR airports.iata = flights.departure_airport
+             OR airports.icao = flights.departure_airport
+             OR airport_aliases.alias = flights.departure_airport
+          LIMIT 1
+        ), departure_airport);
+
+        UPDATE flights
+        SET arrival_airport = COALESCE((
+          SELECT COALESCE(airports.iata, airports.code)
+          FROM airports
+          LEFT JOIN airport_aliases ON airport_aliases.airport_id = airports.id
+          WHERE airports.code = flights.arrival_airport
+             OR airports.iata = flights.arrival_airport
+             OR airports.icao = flights.arrival_airport
+             OR airport_aliases.alias = flights.arrival_airport
+          LIMIT 1
+        ), arrival_airport);
+      `);
+    }
+
     db.exec(`
       UPDATE flights
-      SET operational_key =
-        trim(flight_date) || '|' ||
-        upper(trim(COALESCE(aircraft_registration, ''))) || '|' ||
-        upper(trim(COALESCE(departure_airport, ''))) || '|' ||
-        trim(COALESCE(departure_time, '')) || '|' ||
-        upper(trim(COALESCE(arrival_airport, ''))) || '|' ||
-        trim(COALESCE(arrival_time, ''))
-      WHERE operational_key IS NULL
-        AND (
-          trim(COALESCE(departure_time, '')) <> ''
+      SET operational_key = CASE
+        WHEN trim(COALESCE(departure_time, '')) <> ''
           OR trim(COALESCE(arrival_time, '')) <> ''
-        );
+        THEN
+          trim(flight_date) || '|' ||
+          upper(trim(COALESCE(aircraft_registration, ''))) || '|' ||
+          upper(trim(COALESCE(departure_airport, ''))) || '|' ||
+          trim(COALESCE(departure_time, '')) || '|' ||
+          upper(trim(COALESCE(arrival_airport, ''))) || '|' ||
+          trim(COALESCE(arrival_time, ''))
+        ELSE NULL
+      END;
 
       DELETE FROM flights AS duplicate
       WHERE duplicate.operational_key IS NOT NULL
@@ -68,16 +105,26 @@ function migrateFlightIdentity() {
           LIMIT 1
         );
 
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_flights_operational_key
+      CREATE UNIQUE INDEX idx_flights_operational_key
       ON flights (operational_key)
       WHERE operational_key IS NOT NULL;
+
+      INSERT INTO app_meta (key, value)
+      VALUES ('flight_identity_version', '2')
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value;
     `);
   })();
 
   const afterCount = db.prepare("SELECT COUNT(*) AS count FROM flights").get().count;
-  if (beforeCount > afterCount) {
-    console.log(`Consolidated ${beforeCount - afterCount} exact duplicate flights.`);
-  }
+  console.log(
+    `Flight identity migration complete: ${beforeCount - afterCount} duplicate flights consolidated.`
+  );
+}
+
+function tableExists(name) {
+  return Boolean(
+    db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(name)
+  );
 }
 
 export function transaction(fn) {
