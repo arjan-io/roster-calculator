@@ -62,6 +62,7 @@ $("#component-editor").addEventListener("change", (event) => {
 async function previewImport(event) {
   event.preventDefault();
   const status = $("#preview-status");
+  const formData = new FormData(event.target);
   pendingImport = null;
   renderPreview([]);
   setImportBusy(true, "Checking roster and duplicates...");
@@ -69,7 +70,7 @@ async function previewImport(event) {
   try {
     const response = await fetch("/api/imports/preview", {
       method: "POST",
-      body: new FormData(event.target)
+      body: formData
     });
     const result = await response.json();
 
