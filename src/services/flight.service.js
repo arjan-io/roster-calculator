@@ -1,6 +1,17 @@
 import { db } from "../db/connection.js";
 
-export function listFlights({ limit = 100 } = {}) {
+export function listFlights({ limit = 100, issue, airport } = {}) {
+  const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 1000);
+  let where = "";
+  const parameters = [];
+
+  if (issue === "blank_airport") {
+    where = "WHERE trim(COALESCE(departure_airport, '')) = '' OR trim(COALESCE(arrival_airport, '')) = ''";
+  } else if (issue === "missing_airport" && airport) {
+    where = "WHERE departure_airport = ? OR arrival_airport = ?";
+    parameters.push(String(airport).toUpperCase(), String(airport).toUpperCase());
+  }
+
   return db.prepare(`
     SELECT
       id,
@@ -17,9 +28,10 @@ export function listFlights({ limit = 100 } = {}) {
       display_code AS displayCode,
       source_format AS sourceFormat
     FROM flights
+    ${where}
     ORDER BY flight_date DESC, departure_time DESC, id DESC
     LIMIT ?
-  `).all(limit);
+  `).all(...parameters, safeLimit);
 }
 
 export function getFlightSummary() {
