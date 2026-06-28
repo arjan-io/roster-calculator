@@ -13,7 +13,8 @@ export function listIssues() {
       type: "blank_airport",
       label: "A flight has a blank airport code",
       detail: `${blankAirports.occurrences} sector${blankAirports.occurrences === 1 ? "" : "s"} affected`,
-      target: "flights"
+      target: "flights",
+      flightFilter: "blank_airport"
     });
   }
 
@@ -43,7 +44,9 @@ export function listIssues() {
       type: "missing_airport",
       label: `${item.airport} is missing from Airports`,
       detail: `${item.occurrences} sector${item.occurrences === 1 ? "" : "s"} affected`,
-      target: "airports"
+      target: "flights",
+      flightFilter: "missing_airport",
+      airport: item.airport
     });
   }
 
