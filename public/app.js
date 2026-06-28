@@ -127,7 +127,7 @@ async function savePaymentPeriod(event) {
   event.preventDefault();
   const form = event.target;
   const fields = Object.fromEntries(new FormData(form));
-  const components = $(".component-column", $("#component-editor")).map((row) => ({
+  const components = $$(".component-column", $("#component-editor")).map((row) => ({
     code: $("[name='componentCode']", row).value,
     name: $("[name='componentName']", row).value,
     calculationType: $("[name='calculationType']", row).value,
