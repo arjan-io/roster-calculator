@@ -310,7 +310,6 @@ function renderDuties() {
 function flightRow(flight) {
   const tr = tableRow([
     flight.flightDate,
-    flight.flightNumber || "-",
     `${flight.departureAirport || "(blank)"} -> ${flight.arrivalAirport || "(blank)"}`,
     `${flight.departureTime || "-"} - ${flight.arrivalTime || "-"}`,
     flight.aircraftType || "-",
@@ -337,7 +336,7 @@ function dutyRow(duty) {
 function renderPreview(flights) {
   $("#preview-table").classList.toggle("hidden", flights.length === 0);
   $("#preview-body").replaceChildren(...flights.slice(0, 100).map((flight) => tableRow([
-    flight.flightDate, flight.flightNumber || "-", `${flight.departureAirport} -> ${flight.arrivalAirport}`,
+    flight.flightDate, `${flight.departureAirport} -> ${flight.arrivalAirport}`,
     `${flight.departureTime || "-"} - ${flight.arrivalTime || "-"}`,
     flight.aircraftType || "-", flight.aircraftRegistration || "-", flight.duplicate ? "Duplicate" : "New"
   ], flight.duplicate)));
