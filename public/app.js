@@ -44,6 +44,7 @@ $("#airport-form [name='lidoCoordinate']").addEventListener("blur", (event) => {
   event.target.value = formatCoordinate(event.target.value);
 });
 
+$("#flights-body").addEventListener("click", handleFlightAction);
 $("#airports-body").addEventListener("click", handleAirportAction);
 $("#duties-body").addEventListener("click", handleDutyAction);
 $("#payment-periods-body").addEventListener("click", handlePaymentAction);
@@ -146,6 +147,15 @@ async function savePaymentPeriod(event) {
   }
 }
 
+async function handleFlightAction(event) {
+  const button = event.target.closest("[data-action='delete-flight']");
+  if (!button) return;
+  if (!confirm("Delete this flight and keep it excluded from future imports?")) return;
+
+  await api(`/api/flights/${button.dataset.id}`, { method: "DELETE" });
+  await Promise.all([loadDashboard(), loadIssues()]);
+}
+
 async function handleAirportAction(event) {
   const button = event.target.closest("[data-action]");
   if (!button) return;
@@ -220,13 +230,7 @@ async function loadFlights(filter = null) {
 
   $("#flights-heading").textContent = filter ? `Affected flights: ${filter.label}` : "Recent flights";
   $("#clear-flight-filter").classList.toggle("hidden", !filter);
-  $("#flights-body").replaceChildren(...flights.map((flight) => tableRow([
-    flight.flightDate, flight.flightNumber || "-", `${flight.departureAirport || "(blank)"} -> ${flight.arrivalAirport || "(blank)"}`,
-    `${flight.departureTime || "-"} - ${flight.arrivalTime || "-"}`,
-    flight.aircraftType || "-", flight.aircraftRegistration || "-",
-    flight.distanceNm == null ? "Missing airport" : `${Math.round(flight.distanceNm)} nm`,
-    flight.sourceFormat
-  ])));
+  $("#flights-body").replaceChildren(...flights.map(flightRow));
 }
 
 async function loadAirports() {
@@ -301,6 +305,21 @@ function renderDuties() {
     (dutyFilter === "unpaid" && !duty.paid)
   );
   $("#duties-body").replaceChildren(...filtered.map(dutyRow));
+}
+
+function flightRow(flight) {
+  const tr = tableRow([
+    flight.flightDate,
+    flight.flightNumber || "-",
+    `${flight.departureAirport || "(blank)"} -> ${flight.arrivalAirport || "(blank)"}`,
+    `${flight.departureTime || "-"} - ${flight.arrivalTime || "-"}`,
+    flight.aircraftType || "-",
+    flight.aircraftRegistration || "-",
+    flight.distanceNm == null ? "Missing airport" : `${Math.round(flight.distanceNm)} nm`,
+    flight.sourceFormat
+  ]);
+  tr.append(iconCell("&times;", "Delete flight", "delete-flight", flight.id, true));
+  return tr;
 }
 
 function dutyRow(duty) {
