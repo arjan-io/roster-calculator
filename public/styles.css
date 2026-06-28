@@ -84,6 +84,32 @@ main { max-width: 1280px; margin: 0 auto; padding: 24px; }
   gap: 10px;
 }
 .toolbar { justify-content: space-between; margin-bottom: 10px; }
+.import-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 30px;
+  gap: 16px;
+}
+.import-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent-dark);
+  font-size: 14px;
+  font-weight: bold;
+}
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #b7d9d5;
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 input, select {
   width: 100%;
   min-height: 38px;
