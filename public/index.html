@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Roster Calculator</title>
-    <link rel="stylesheet" href="/styles.css?v=20260628-4">
+    <link rel="stylesheet" href="/styles.css?v=20260628-5">
   </head>
   <body>
     <header class="app-header">
@@ -32,11 +32,17 @@
           <div class="toolbar">
             <form id="import-form">
               <input id="roster-file" name="rosterFile" type="file" accept=".csv,text/csv">
-              <button type="submit">Preview import</button>
+              <button id="preview-button" type="submit">Preview import</button>
             </form>
             <button id="commit-button" type="button" disabled>Commit import</button>
           </div>
-          <p id="preview-status" class="status">No file selected.</p>
+          <div class="import-feedback">
+            <p id="preview-status" class="status">No file selected.</p>
+            <div id="import-loading" class="import-loading hidden" role="status">
+              <span class="spinner" aria-hidden="true"></span>
+              <span id="import-loading-text">Working...</span>
+            </div>
+          </div>
           <div id="preview-table" class="table-wrap hidden">
             <table><thead><tr><th>Date</th><th>Route</th><th>Times</th><th>Model</th><th>Reg</th><th>Status</th></tr></thead>
             <tbody id="preview-body"></tbody></table>
@@ -127,6 +133,6 @@
         <div id="issues-list" class="issues-list"></div>
       </section>
     </main>
-    <script src="/app.js?v=20260628-4" type="module"></script>
+    <script src="/app.js?v=20260628-5" type="module"></script>
   </body>
 </html>
