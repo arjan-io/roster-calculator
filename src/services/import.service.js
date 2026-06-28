@@ -203,14 +203,26 @@ export function listImportBatches() {
 function normalizeFlightAirports(flight) {
   return {
     ...flight,
-    departureAirport: resolveAirport(flight.departureAirport),
-    arrivalAirport: resolveAirport(flight.arrivalAirport)
+    departureAirport: resolveAirport(flight.departureAirport, "departure"),
+    arrivalAirport: resolveAirport(flight.arrivalAirport, "arrival")
   };
 }
 
-function resolveAirport(value) {
+function resolveAirport(value, field) {
   const code = canonicalAirportCode(value);
-  return findCanonicalAirport.get({ code })?.code || code;
+  const resolved = findCanonicalAirport.get({ code })?.code || code;
+
+  if (/^[A-Z]{3}$/.test(resolved)) {
+    return resolved;
+  }
+
+  if (!resolved) {
+    throw new Error(`A flight has no ${field} airport. Add or correct it before importing.`);
+  }
+
+  throw new Error(
+    `Airport ${resolved} has no IATA mapping. Add it under Data > Airports before importing.`
+  );
 }
 
 function findDuplicateFlight(flight) {
