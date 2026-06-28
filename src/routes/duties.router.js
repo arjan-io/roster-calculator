@@ -3,6 +3,7 @@ import {
   deleteMiscDuty,
   listDutyTypes,
   listMiscDuties,
+  markMiscDutyPaid,
   saveMiscDuty
 } from "../services/duty.service.js";
 
@@ -16,6 +17,9 @@ router.post("/", (req, res, next) => {
 });
 router.put("/:id", (req, res, next) => {
   try { res.json(saveMiscDuty({ ...req.body, id: req.params.id })); } catch (error) { next(error); }
+});
+router.patch("/:id/paid", (req, res, next) => {
+  try { res.json(markMiscDutyPaid(req.params.id)); } catch (error) { next(error); }
 });
 router.delete("/:id", (req, res, next) => {
   try { res.json(deleteMiscDuty(req.params.id)); } catch (error) { next(error); }
