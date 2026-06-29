@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Roster Calculator</title>
-    <link rel="stylesheet" href="/styles.css?v=20260629-2">
+    <link rel="stylesheet" href="/styles.css?v=20260629-3">
   </head>
   <body>
     <header class="app-header">
@@ -185,12 +185,37 @@
           <span>Roster month <strong id="calculation-roster-month">-</strong></span>
           <span>Rates from <strong id="calculation-rate-date">-</strong></span>
         </div>
-        <div class="table-wrap payment-estimate">
-          <table>
-            <thead><tr><th>Description</th><th>Normaal</th><th>Bijzonder</th></tr></thead>
-            <tbody id="payment-calculation-body"></tbody>
-          </table>
-        </div>
+        <section class="payment-detail-section">
+          <div class="section-heading">
+            <div><h3>Sector pay</h3><p>Flights from the roster month, grouped by distance.</p></div>
+          </div>
+          <div class="table-wrap payment-breakdown">
+            <table>
+              <thead><tr><th>Distance band</th><th>Flights</th><th>Weight</th><th>Units</th><th>Amount</th></tr></thead>
+              <tbody id="sector-breakdown-body"></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="payment-detail-section">
+          <div class="section-heading">
+            <div><h3>Misc duties</h3><p>All configured duty types are shown, including zero entries.</p></div>
+          </div>
+          <div class="table-wrap payment-breakdown">
+            <table>
+              <thead><tr><th>Duty</th><th>Count</th><th>Rate</th><th>Normaal</th><th>Bijzonder</th></tr></thead>
+              <tbody id="duty-breakdown-body"></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="payment-detail-section payment-summary-section">
+          <div class="section-heading"><div><h3>Payment summary</h3></div></div>
+          <div class="table-wrap payment-estimate">
+            <table>
+              <thead><tr><th>Description</th><th>Normaal</th><th>Bijzonder</th></tr></thead>
+              <tbody id="payment-calculation-body"></tbody>
+            </table>
+          </div>
+        </section>
         <div class="withholding-control">
           <label>Loonheffing from payslip<input id="withholding-amount" type="number" min="0" step="0.01" value="0"></label>
           <div><span>Estimated payable</span><strong id="estimated-payable">-</strong></div>
@@ -202,6 +227,6 @@
         <div id="issues-list" class="issues-list"></div>
       </section>
     </main>
-    <script src="/app.js?v=20260629-2" type="module"></script>
+    <script src="/app.js?v=20260629-3" type="module"></script>
   </body>
 </html>
