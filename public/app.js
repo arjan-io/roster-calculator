@@ -538,14 +538,12 @@ function renderPaymentCalculation() {
   for (const line of calculation.grossDeductions) {
     rows.push(paymentLineRow(line.label, line.amount, 0));
   }
-  if (calculation.grossDeductions.length) {
-    rows.push(paymentLineRow(
-      "Taxable basis",
-      calculation.totals.taxableNormal,
-      calculation.totals.taxableSpecial,
-      "payment-subtotal"
-    ));
-  }
+  rows.push(paymentLineRow(
+    "Taxable basis",
+    calculation.totals.taxableNormal,
+    calculation.totals.taxableSpecial,
+    "payment-subtotal"
+  ));
   rows.push(paymentLineRow(
     `Loonheffing (${formatNumber(calculation.paymentPeriod.normalTaxRate)}% / ${formatNumber(calculation.paymentPeriod.specialTaxRate)}%)`,
     -calculation.totals.normalTax,
@@ -695,6 +693,8 @@ async function resetPaymentForm() {
   $("[data-cancel='payment']").classList.add("hidden");
   const defaults = await api("/api/payments/periods/defaults");
   $("#payment-period-form [name='basicSalary']").value = defaults.basicSalary || "";
+  $("#payment-period-form [name='normalTaxRate']").value = defaults.normalTaxRate ?? 43.31;
+  $("#payment-period-form [name='specialTaxRate']").value = defaults.specialTaxRate ?? 49.5;
   renderComponentEditor(defaults.components);
 }
 
