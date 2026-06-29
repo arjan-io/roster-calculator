@@ -532,6 +532,12 @@ function addComponentColumn(component = {}) {
       <option value="ratio" ${component.calculationType !== "fixed" ? "selected" : ""}>Ratio of basic salary</option>
       <option value="fixed" ${component.calculationType === "fixed" ? "selected" : ""}>Fixed amount</option>
     </select>
+    <select name="paymentTreatment">
+      <option value="normal" ${component.paymentTreatment === "normal" || !component.paymentTreatment ? "selected" : ""}>Normaal</option>
+      <option value="special" ${component.paymentTreatment === "special" ? "selected" : ""}>Bijzonder</option>
+      <option value="net_reimbursement" ${component.paymentTreatment === "net_reimbursement" ? "selected" : ""}>Net reimbursement</option>
+      <option value="gross_deduction" ${component.paymentTreatment === "gross_deduction" ? "selected" : ""}>Gross deduction</option>
+    </select>
     <input name="ratio" type="number" step="0.000001" placeholder="Ratio" value="${component.ratio ?? ""}">
     <input name="amount" type="number" step="0.01" placeholder="Amount" value="${component.amount ?? ""}">
     <button class="icon-button danger" type="button" data-remove-component title="Remove component">&times;</button>
