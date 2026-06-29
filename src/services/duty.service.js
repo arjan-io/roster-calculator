@@ -2,31 +2,46 @@ import { db } from "../db/connection.js";
 
 export function listDutyTypes() {
   return db.prepare(`
-    SELECT id, code, name, sector_value AS sectorValue, is_paid AS isPaid
+    SELECT id, code, name, sector_value AS sectorValue, is_paid AS isPaid,
+           tax_treatment AS taxTreatment,
+           payment_component_code AS paymentComponentCode,
+           payment_multiplier AS paymentMultiplier
     FROM duty_types ORDER BY name
   `).all();
 }
 
-export function saveDutyType({ id, code, name, sectorValue, isPaid }) {
+export function saveDutyType({
+  id, code, name, sectorValue, isPaid, taxTreatment, paymentComponentCode, paymentMultiplier
+}) {
   const dutyCode = String(code || name || "").trim();
   const dutyName = String(name || code || "").trim();
   if (!dutyCode || !dutyName) throw new Error("Enter a duty code and name.");
   const value = Number(sectorValue || 0);
   if (!Number.isFinite(value)) throw new Error("Sector value must be a number.");
+  const treatment = ["special", "none"].includes(taxTreatment) ? taxTreatment : "normal";
+  const componentCode = String(paymentComponentCode || "").trim() || null;
+  const multiplier = Number(paymentMultiplier || 1);
+  if (!Number.isFinite(multiplier)) throw new Error("Payment multiplier must be a number.");
 
   try {
     if (id) {
       const result = db.prepare(`
         UPDATE duty_types
-        SET code = ?, name = ?, sector_value = ?, is_paid = ?
+        SET code = ?, name = ?, sector_value = ?, is_paid = ?, tax_treatment = ?,
+            payment_component_code = ?, payment_multiplier = ?
         WHERE id = ?
-      `).run(dutyCode, dutyName, value, toBoolean(isPaid), Number(id));
+      `).run(
+        dutyCode, dutyName, value, toBoolean(isPaid), treatment,
+        componentCode, multiplier, Number(id)
+      );
       if (!result.changes) throw new Error("Duty type not found.");
     } else {
       db.prepare(`
-        INSERT INTO duty_types (code, name, sector_value, is_paid)
-        VALUES (?, ?, ?, ?)
-      `).run(dutyCode, dutyName, value, toBoolean(isPaid));
+        INSERT INTO duty_types (
+          code, name, sector_value, is_paid, tax_treatment,
+          payment_component_code, payment_multiplier
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(dutyCode, dutyName, value, toBoolean(isPaid), treatment, componentCode, multiplier);
     }
   } catch (error) {
     if (String(error.message).includes("UNIQUE constraint failed")) {
