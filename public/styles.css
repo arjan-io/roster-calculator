@@ -313,16 +313,11 @@ tr.duplicate td { color: #9a3412; background: var(--warning-bg); }
 }
 .net-adjustment:first-of-type td { border-top: 2px solid var(--line); }
 .payment-result {
-  display: flex;
-  align-items: end;
-  justify-content: flex-end;
-  gap: 32px;
-  margin-top: 14px;
-}
-.payment-result {
   display: grid;
+  justify-content: end;
   gap: 4px;
   min-width: 180px;
+  margin-top: 14px;
   text-align: right;
 }
 .payment-result span { color: var(--muted); font-size: 13px; }
