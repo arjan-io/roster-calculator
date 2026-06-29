@@ -393,8 +393,12 @@ async function loadDuties() {
     type.code,
     type.name,
     type.sectorValue,
+    taxTreatmentLabel(type.taxTreatment),
+    type.paymentComponentCode || "-",
+    type.paymentMultiplier,
     type.isPaid ? "Yes" : "No"
   ], type.id)));
+  populateDutyComponentSelect();
 }
 
 async function loadPaymentPeriods() {
@@ -409,6 +413,7 @@ async function loadPaymentPeriods() {
 
   const header = tableHeader(["Effective from", "Basic salary", ...definitions.values(), "Actions", ""]);
   $("#payment-periods-head").replaceChildren(header);
+  populateDutyComponentSelect();
   $("#payment-periods-body").replaceChildren(...paymentPeriods.map((period) => {
     const byCode = new Map(period.components.map((component) => [component.code, component]));
     const values = [period.effectiveDate, money(period.basicSalary)];
@@ -425,6 +430,7 @@ async function loadOneOffPayments() {
   $("#one-offs-body").replaceChildren(...oneOffPayments.map((item) => actionRow([
     `${item.paymentYear}-${String(item.paymentMonth).padStart(2, "0")}`,
     item.description,
+    taxTreatmentLabel(item.taxTreatment),
     money(item.amount)
   ], item.id)));
 }
@@ -435,8 +441,9 @@ async function loadDeductions() {
     item.startMonth,
     item.endMonth || "Ongoing",
     item.paymentStage === "gross" ? "Gross" : "Net",
+    item.calculationType === "normal_percentage" ? "% of Normaal" : "Fixed",
     item.description,
-    money(item.amount)
+    item.calculationType === "normal_percentage" ? `${item.amount}%` : money(item.amount)
   ], item.id)));
 }
 
