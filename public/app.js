@@ -284,6 +284,56 @@ async function handleDutyAction(event) {
   }
 }
 
+async function handleOneOffAction(event) {
+  const button = event.target.closest("[data-action]");
+  if (!button) return;
+  const item = oneOffPayments.find((payment) => payment.id === Number(button.dataset.id));
+  if (button.dataset.action === "edit") {
+    fillForm($("#one-off-form"), {
+      ...item,
+      month: `${item.paymentYear}-${String(item.paymentMonth).padStart(2, "0")}`
+    });
+    $("[data-cancel='one-off']").classList.remove("hidden");
+  }
+  if (button.dataset.action === "delete" && confirm("Delete this one-off payment?")) {
+    await api(`/api/payments/one-offs/${item.id}`, { method: "DELETE" });
+    await loadOneOffPayments();
+  }
+}
+
+async function handleDutyTypeAction(event) {
+  const button = event.target.closest("[data-action]");
+  if (!button) return;
+  const item = dutyTypes.find((type) => type.id === Number(button.dataset.id));
+  if (button.dataset.action === "edit") {
+    fillForm($("#duty-type-form"), item);
+    setDutyTypePaidToggle(Boolean(item.isPaid));
+    $("[data-cancel='duty-type']").classList.remove("hidden");
+  }
+  if (button.dataset.action === "delete" && confirm("Delete this duty type?")) {
+    try {
+      await api(`/api/duties/types/${item.id}`, { method: "DELETE" });
+      await loadDuties();
+    } catch (error) {
+      $("#duty-type-status").textContent = error.message;
+    }
+  }
+}
+
+async function handleDeductionAction(event) {
+  const button = event.target.closest("[data-action]");
+  if (!button) return;
+  const item = deductions.find((deduction) => deduction.id === Number(button.dataset.id));
+  if (button.dataset.action === "edit") {
+    fillForm($("#deduction-form"), item);
+    $("[data-cancel='deduction']").classList.remove("hidden");
+  }
+  if (button.dataset.action === "delete" && confirm("Delete this deduction?")) {
+    await api(`/api/payments/deductions/${item.id}`, { method: "DELETE" });
+    await loadDeductions();
+  }
+}
+
 async function handlePaymentAction(event) {
   const button = event.target.closest("[data-action]");
   if (!button) return;
