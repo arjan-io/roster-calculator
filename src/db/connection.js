@@ -29,6 +29,7 @@ db.exec(`
 
 migrateFlightIdentity();
 migratePaymentData();
+migrateTaxRates();
 
 function migrateFlightIdentity() {
   if (!tableExists("flights")) return;
@@ -220,6 +221,28 @@ function migratePaymentData() {
       ON CONFLICT(key) DO UPDATE SET value = excluded.value;
     `);
   })();
+}
+
+function migrateTaxRates() {
+  if (!tableExists("payment_periods")) return;
+  const version = db.prepare(
+    "SELECT value FROM app_meta WHERE key = 'tax_rate_version'"
+  ).get()?.value;
+  if (version === "1") return;
+
+  const columns = db.prepare("PRAGMA table_info(payment_periods)").all();
+  if (!columns.some((column) => column.name === "normal_tax_rate")) {
+    db.exec("ALTER TABLE payment_periods ADD COLUMN normal_tax_rate REAL NOT NULL DEFAULT 43.31");
+  }
+  if (!columns.some((column) => column.name === "special_tax_rate")) {
+    db.exec("ALTER TABLE payment_periods ADD COLUMN special_tax_rate REAL NOT NULL DEFAULT 49.5");
+  }
+
+  db.prepare(`
+    INSERT INTO app_meta (key, value)
+    VALUES ('tax_rate_version', '1')
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value
+  `).run();
 }
 
 function previousMonth(value) {
