@@ -129,6 +129,9 @@ CREATE TABLE IF NOT EXISTS one_off_payments (
 CREATE TABLE IF NOT EXISTS deductions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   effective_date TEXT NOT NULL,
+  start_month TEXT,
+  end_month TEXT,
+  payment_stage TEXT NOT NULL DEFAULT 'net' CHECK (payment_stage IN ('gross', 'net')),
   description TEXT NOT NULL,
   amount REAL NOT NULL
 );
@@ -152,3 +155,5 @@ CREATE INDEX IF NOT EXISTS idx_misc_duties_date
   ON misc_duties (duty_date);
 CREATE INDEX IF NOT EXISTS idx_payment_periods_date
   ON payment_periods (effective_date);
+CREATE INDEX IF NOT EXISTS idx_deductions_months
+  ON deductions (start_month, end_month);
