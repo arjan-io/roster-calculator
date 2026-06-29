@@ -191,6 +191,48 @@ async function savePaymentPeriod(event) {
   }
 }
 
+async function saveOneOffPayment(event) {
+  event.preventDefault();
+  const payload = Object.fromEntries(new FormData(event.target));
+  const url = payload.id ? `/api/payments/one-offs/${payload.id}` : "/api/payments/one-offs";
+  try {
+    await api(url, { method: payload.id ? "PUT" : "POST", body: JSON.stringify(payload) });
+    $("#one-off-status").textContent = "One-off payment saved.";
+    resetOneOffForm();
+    await loadOneOffPayments();
+  } catch (error) {
+    $("#one-off-status").textContent = error.message;
+  }
+}
+
+async function saveDutyType(event) {
+  event.preventDefault();
+  const payload = Object.fromEntries(new FormData(event.target));
+  const url = payload.id ? `/api/duties/types/${payload.id}` : "/api/duties/types";
+  try {
+    await api(url, { method: payload.id ? "PUT" : "POST", body: JSON.stringify(payload) });
+    $("#duty-type-status").textContent = "Duty type saved.";
+    resetDutyTypeForm();
+    await loadDuties();
+  } catch (error) {
+    $("#duty-type-status").textContent = error.message;
+  }
+}
+
+async function saveDeduction(event) {
+  event.preventDefault();
+  const payload = Object.fromEntries(new FormData(event.target));
+  const url = payload.id ? `/api/payments/deductions/${payload.id}` : "/api/payments/deductions";
+  try {
+    await api(url, { method: payload.id ? "PUT" : "POST", body: JSON.stringify(payload) });
+    $("#deduction-status").textContent = "Deduction saved.";
+    resetDeductionForm();
+    await loadDeductions();
+  } catch (error) {
+    $("#deduction-status").textContent = error.message;
+  }
+}
+
 async function handleFlightAction(event) {
   const button = event.target.closest("[data-action='delete-flight']");
   if (!button) return;
