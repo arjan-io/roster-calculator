@@ -544,6 +544,25 @@ async function resetPaymentForm() {
   renderComponentEditor(defaults.components);
 }
 
+function resetOneOffForm() {
+  $("#one-off-form").reset();
+  $("#one-off-form [name='id']").value = "";
+  $("[data-cancel='one-off']").classList.add("hidden");
+}
+
+function resetDutyTypeForm() {
+  $("#duty-type-form").reset();
+  $("#duty-type-form [name='id']").value = "";
+  setDutyTypePaidToggle(true);
+  $("[data-cancel='duty-type']").classList.add("hidden");
+}
+
+function resetDeductionForm() {
+  $("#deduction-form").reset();
+  $("#deduction-form [name='id']").value = "";
+  $("[data-cancel='deduction']").classList.add("hidden");
+}
+
 function resetAirportForm() {
   $("#airport-form").reset();
   $("#airport-form [name='id']").value = "";
@@ -562,6 +581,14 @@ function setPaidToggle(paid) {
   toggle.classList.toggle("active", paid);
   $("#duty-form [name='paid']").value = paid ? "1" : "0";
 }
+function setDutyTypePaidToggle(paid) {
+  const toggle = $("#duty-type-paid-toggle");
+  toggle.textContent = paid ? "Yes" : "No";
+  toggle.setAttribute("aria-pressed", String(paid));
+  toggle.classList.toggle("active", paid);
+  $("#duty-type-form [name='isPaid']").value = paid ? "1" : "0";
+}
+
 function fillForm(form, values) {
   for (const [name, value] of Object.entries(values)) {
     const input = form.elements.namedItem(name);
@@ -649,5 +676,13 @@ await loadAll();
 await resetPaymentForm();
 
 async function loadAll() {
-  await Promise.all([loadDashboard(), loadAirports(), loadDuties(), loadPaymentPeriods(), loadIssues()]);
+  await Promise.all([
+    loadDashboard(),
+    loadAirports(),
+    loadDuties(),
+    loadPaymentPeriods(),
+    loadOneOffPayments(),
+    loadDeductions(),
+    loadIssues()
+  ]);
 }
