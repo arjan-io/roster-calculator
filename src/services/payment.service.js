@@ -209,24 +209,29 @@ export function calculatePaymentPreview(paymentMonth) {
   }
 
   const sectorRate = componentMap.get("sector");
-  const sectorUnits = db.prepare(`
-    SELECT COALESCE(SUM(
-      CASE
-        WHEN distance_nm <= 399 THEN 0.8
-        WHEN distance_nm <= 1000 THEN 1.2
-        WHEN distance_nm <= 1500 THEN 1.5
-        ELSE 2.5
-      END
-    ), 0) AS units
+  const sectorRateValue = componentValue(sectorRate, period.basicSalary);
+  const sectorCounts = db.prepare(`
+    SELECT
+      SUM(CASE WHEN distance_nm <= 399 THEN 1 ELSE 0 END) AS shortCount,
+      SUM(CASE WHEN distance_nm BETWEEN 400 AND 1000 THEN 1 ELSE 0 END) AS mediumCount,
+      SUM(CASE WHEN distance_nm BETWEEN 1001 AND 1500 THEN 1 ELSE 0 END) AS longCount,
+      SUM(CASE WHEN distance_nm > 1500 THEN 1 ELSE 0 END) AS extraLongCount
     FROM flights
     WHERE substr(flight_date, 1, 7) = ?
       AND distance_nm IS NOT NULL
-  `).get(rosterMonth).units;
+  `).get(rosterMonth);
+  const sectorBreakdown = [
+    sectorBreakdownRow("Short", Number(sectorCounts.shortCount || 0), 0.8, sectorRateValue),
+    sectorBreakdownRow("Medium", Number(sectorCounts.mediumCount || 0), 1.2, sectorRateValue),
+    sectorBreakdownRow("Long", Number(sectorCounts.longCount || 0), 1.5, sectorRateValue),
+    sectorBreakdownRow("Extra long", Number(sectorCounts.extraLongCount || 0), 2.5, sectorRateValue)
+  ];
+  const sectorUnits = sectorBreakdown.reduce((total, row) => total + row.nominal, 0);
   if (sectorRate && sectorUnits) {
     addTaxedLine(
       earnings,
       "Sector Pay",
-      sectorUnits * componentValue(sectorRate, period.basicSalary),
+      sectorUnits * sectorRateValue,
       "normal",
       { quantity: sectorUnits }
     );
@@ -234,28 +239,46 @@ export function calculatePaymentPreview(paymentMonth) {
 
   const dutyRows = db.prepare(`
     SELECT duty_types.name, duty_types.sector_value AS sectorValue,
+           duty_types.is_paid AS isPaid,
            duty_types.tax_treatment AS taxTreatment,
            duty_types.payment_component_code AS paymentComponentCode,
            duty_types.payment_multiplier AS paymentMultiplier,
-           COUNT(*) AS quantity
-    FROM misc_duties
-    JOIN duty_types ON duty_types.id = misc_duties.duty_type_id
-    WHERE substr(misc_duties.duty_date, 1, 7) = ?
-      AND duty_types.is_paid = 1
+           COUNT(misc_duties.id) AS quantity
+    FROM duty_types
+    LEFT JOIN misc_duties
+      ON misc_duties.duty_type_id = duty_types.id
+     AND substr(misc_duties.duty_date, 1, 7) = ?
     GROUP BY duty_types.id
     ORDER BY duty_types.name
   `).all(rosterMonth);
+  const dutyBreakdown = [];
 
   for (const duty of dutyRows) {
     let unitAmount = 0;
-    if (Number(duty.sectorValue)) {
-      unitAmount = Number(duty.sectorValue) * componentValue(sectorRate, period.basicSalary);
-    } else if (duty.paymentComponentCode) {
+    let rateSource = "Not included in pay";
+    if (duty.isPaid && Number(duty.sectorValue)) {
+      unitAmount = Number(duty.sectorValue) * sectorRateValue;
+      rateSource = `${duty.sectorValue} sector units`;
+    } else if (duty.isPaid && duty.paymentComponentCode) {
       unitAmount =
         componentValue(componentMap.get(duty.paymentComponentCode), period.basicSalary) *
         Number(duty.paymentMultiplier || 1);
+      rateSource = duty.paymentMultiplier && duty.paymentMultiplier !== 1
+        ? `${duty.paymentComponentCode} x ${duty.paymentMultiplier}`
+        : duty.paymentComponentCode;
     }
-    const amount = duty.quantity * unitAmount;
+    const amount = Number(duty.quantity) * unitAmount;
+    const normal = duty.taxTreatment === "normal" ? amount : 0;
+    const special = duty.taxTreatment === "special" ? amount : 0;
+    dutyBreakdown.push({
+      name: duty.name,
+      quantity: Number(duty.quantity),
+      rateSource,
+      normal,
+      special,
+      net: duty.taxTreatment === "none" ? amount : 0
+    });
+
     if (!amount) continue;
     if (duty.taxTreatment === "none") {
       netAdjustments.push({ label: duty.name, amount, quantity: duty.quantity });
@@ -313,6 +336,8 @@ export function calculatePaymentPreview(paymentMonth) {
     paymentMonth,
     rosterMonth,
     paymentPeriod: period,
+    sectorBreakdown,
+    dutyBreakdown,
     earnings,
     grossDeductions,
     netAdjustments,
@@ -325,6 +350,11 @@ export function calculatePaymentPreview(paymentMonth) {
       netAdjustments: netAdjustmentTotal
     }
   };
+}
+
+function sectorBreakdownRow(label, count, weight, sectorRate) {
+  const nominal = count * weight;
+  return { label, count, weight, nominal, amount: nominal * sectorRate };
 }
 
 function addTaxedLine(lines, label, amount, treatment, extra = {}) {
