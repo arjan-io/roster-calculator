@@ -179,7 +179,8 @@ async function savePaymentPeriod(event) {
     name: $("[name='componentName']", row).value,
     calculationType: $("[name='calculationType']", row).value,
     ratio: $("[name='ratio']", row).value,
-    amount: $("[name='amount']", row).value
+    amount: $("[name='amount']", row).value,
+    paymentTreatment: $("[name='paymentTreatment']", row).value
   }));
   try {
     await api(fields.id ? `/api/payments/periods/${fields.id}` : "/api/payments/periods", {
