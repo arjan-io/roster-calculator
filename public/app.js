@@ -28,7 +28,6 @@ $("#one-off-form").addEventListener("submit", saveOneOffPayment);
 $("#duty-type-form").addEventListener("submit", saveDutyType);
 $("#deduction-form").addEventListener("submit", saveDeduction);
 $("#payment-calculation-form").addEventListener("submit", calculatePayment);
-$("#withholding-amount").addEventListener("input", updateEstimatedPayable);
 $("#add-component").addEventListener("click", () => addComponentColumn());
 $("#clear-flight-filter").addEventListener("click", async () => {
   activeFlightFilter = null;
@@ -411,12 +410,20 @@ async function loadPaymentPeriods() {
     }
   }
 
-  const header = tableHeader(["Effective from", "Basic salary", ...definitions.values(), "Actions", ""]);
+  const header = tableHeader([
+    "Effective from", "Basic salary", "Normaal tax", "Bijzonder tax",
+    ...definitions.values(), "Actions", ""
+  ]);
   $("#payment-periods-head").replaceChildren(header);
   populateDutyComponentSelect();
   $("#payment-periods-body").replaceChildren(...paymentPeriods.map((period) => {
     const byCode = new Map(period.components.map((component) => [component.code, component]));
-    const values = [period.effectiveDate, money(period.basicSalary)];
+    const values = [
+      period.effectiveDate,
+      money(period.basicSalary),
+      `${formatNumber(period.normalTaxRate)}%`,
+      `${formatNumber(period.specialTaxRate)}%`
+    ];
     for (const code of definitions.keys()) {
       const component = byCode.get(code);
       values.push(component ? formatPaymentComponent(component) : "-");
@@ -494,7 +501,7 @@ async function calculatePayment(event) {
 function renderPaymentCalculation() {
   const calculation = paymentCalculation;
   $("#payment-calculation-status").textContent =
-    "Estimate for checking expected payslip items; tax withholding is entered from the payslip.";
+    "Estimate for checking expected payslip items, including calculated tax deductions.";
   $("#calculation-roster-month").textContent = calculation.rosterMonth;
   $("#calculation-rate-date").textContent = calculation.paymentPeriod.effectiveDate;
 
@@ -534,11 +541,23 @@ function renderPaymentCalculation() {
   if (calculation.grossDeductions.length) {
     rows.push(paymentLineRow(
       "Taxable basis",
-      calculation.totals.taxableBasis,
-      0,
+      calculation.totals.taxableNormal,
+      calculation.totals.taxableSpecial,
       "payment-subtotal"
     ));
   }
+  rows.push(paymentLineRow(
+    `Loonheffing (${formatNumber(calculation.paymentPeriod.normalTaxRate)}% / ${formatNumber(calculation.paymentPeriod.specialTaxRate)}%)`,
+    -calculation.totals.normalTax,
+    -calculation.totals.specialTax,
+    "tax-deduction"
+  ));
+  rows.push(paymentLineRow(
+    "Net after tax",
+    calculation.totals.taxableNormal - calculation.totals.normalTax,
+    calculation.totals.taxableSpecial - calculation.totals.specialTax,
+    "payment-total"
+  ));
 
   for (const line of calculation.netAdjustments) {
     rows.push(paymentLineRow(line.label, line.amount, 0, "net-adjustment"));
@@ -566,12 +585,7 @@ function paymentLineRow(label, normal, special, className = "") {
 
 function updateEstimatedPayable() {
   if (!paymentCalculation) return;
-  const withholding = Number($("#withholding-amount").value || 0);
-  const payable =
-    paymentCalculation.totals.taxableBasis -
-    withholding +
-    paymentCalculation.totals.netAdjustments;
-  $("#estimated-payable").textContent = money(payable);
+  $("#estimated-payable").textContent = money(paymentCalculation.totals.payable);
 }
 
 function populateDutyComponentSelect() {
