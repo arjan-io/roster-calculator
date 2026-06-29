@@ -312,27 +312,21 @@ tr.duplicate td { color: #9a3412; background: var(--warning-bg); }
   font-weight: bold;
 }
 .net-adjustment:first-of-type td { border-top: 2px solid var(--line); }
-.withholding-control {
+.payment-result {
   display: flex;
   align-items: end;
   justify-content: flex-end;
   gap: 32px;
   margin-top: 14px;
 }
-.withholding-control label {
-  display: grid;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 13px;
-}
-.withholding-control div {
+.payment-result {
   display: grid;
   gap: 4px;
   min-width: 180px;
   text-align: right;
 }
-.withholding-control div span { color: var(--muted); font-size: 13px; }
-.withholding-control div strong { font-size: 22px; }
+.payment-result span { color: var(--muted); font-size: 13px; }
+.payment-result strong { font-size: 22px; }
 
 .issues-list { display: grid; gap: 8px; }
 .issue-row {
@@ -362,5 +356,7 @@ tr.duplicate td { color: #9a3412; background: var(--warning-bg); }
   .summary-grid, .data-form, .payment-form { grid-template-columns: 1fr; }
   .data-form .wide { grid-column: auto; }
   .issue-row { grid-template-columns: 1fr; }
-  .payment-context, .withholding-control { align-items: stretch; flex-direction: column; }
+  .payment-context, .payment-result { align-items: stretch; flex-direction: column; }
 }
+
+.tax-deduction td { color: var(--danger); }
