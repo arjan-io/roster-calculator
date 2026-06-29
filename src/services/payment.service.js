@@ -74,6 +74,116 @@ export function deletePaymentPeriod(id) {
   return { deleted: true };
 }
 
+export function listOneOffPayments() {
+  return db.prepare(`
+    SELECT id, payment_month AS paymentMonth, payment_year AS paymentYear,
+           description, amount
+    FROM one_off_payments
+    ORDER BY payment_year DESC, payment_month DESC, id DESC
+  `).all();
+}
+
+export function saveOneOffPayment({ id, paymentMonth, paymentYear, month, description, amount }) {
+  const parsed = parsePaymentMonth(month, paymentMonth, paymentYear);
+  const paymentAmount = requiredNumber(amount, "Enter a valid amount.");
+  const label = clean(description) || "One-off payment";
+
+  if (id) {
+    const result = db.prepare(`
+      UPDATE one_off_payments
+      SET payment_month = ?, payment_year = ?, description = ?, amount = ?
+      WHERE id = ?
+    `).run(parsed.month, parsed.year, label, paymentAmount, Number(id));
+    if (!result.changes) throw new Error("One-off payment not found.");
+  } else {
+    db.prepare(`
+      INSERT INTO one_off_payments (payment_month, payment_year, description, amount)
+      VALUES (?, ?, ?, ?)
+    `).run(parsed.month, parsed.year, label, paymentAmount);
+  }
+  return { saved: true };
+}
+
+export function deleteOneOffPayment(id) {
+  const result = db.prepare("DELETE FROM one_off_payments WHERE id = ?").run(Number(id));
+  if (!result.changes) throw new Error("One-off payment not found.");
+  return { deleted: true };
+}
+
+export function listDeductions() {
+  return db.prepare(`
+    SELECT id, start_month AS startMonth, end_month AS endMonth,
+           payment_stage AS paymentStage, description, amount
+    FROM deductions
+    WHERE start_month IS NOT NULL
+    ORDER BY start_month DESC, id DESC
+  `).all();
+}
+
+export function saveDeduction({ id, startMonth, endMonth, paymentStage, description, amount }) {
+  validateMonth(startMonth, "Select a valid start month.");
+  if (endMonth) validateMonth(endMonth, "Select a valid end month.");
+  if (endMonth && endMonth < startMonth) {
+    throw new Error("End month cannot be before start month.");
+  }
+  const stage = paymentStage === "gross" ? "gross" : "net";
+  const label = clean(description);
+  if (!label) throw new Error("Enter a deduction name.");
+  const deductionAmount = requiredNumber(amount, "Enter a valid deduction amount.");
+
+  if (id) {
+    const result = db.prepare(`
+      UPDATE deductions
+      SET effective_date = ?, start_month = ?, end_month = ?,
+          payment_stage = ?, description = ?, amount = ?
+      WHERE id = ?
+    `).run(
+      `${startMonth}-01`, startMonth, endMonth || null,
+      stage, label, deductionAmount, Number(id)
+    );
+    if (!result.changes) throw new Error("Deduction not found.");
+  } else {
+    db.prepare(`
+      INSERT INTO deductions (
+        effective_date, start_month, end_month, payment_stage, description, amount
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `).run(`${startMonth}-01`, startMonth, endMonth || null, stage, label, deductionAmount);
+  }
+  return { saved: true };
+}
+
+export function deleteDeduction(id) {
+  const result = db.prepare("DELETE FROM deductions WHERE id = ?").run(Number(id));
+  if (!result.changes) throw new Error("Deduction not found.");
+  return { deleted: true };
+}
+
+function parsePaymentMonth(value, paymentMonth, paymentYear) {
+  if (value) {
+    validateMonth(value, "Select a valid payment month.");
+    const [year, month] = value.split("-").map(Number);
+    return { year, month };
+  }
+  const month = Number(paymentMonth);
+  const year = Number(paymentYear);
+  if (!Number.isInteger(month) || month < 1 || month > 12 || !Number.isInteger(year)) {
+    throw new Error("Select a valid payment month.");
+  }
+  return { year, month };
+}
+
+function validateMonth(value, message) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(value || ""))) throw new Error(message);
+}
+
+function requiredNumber(value, message) {
+  const number = Number(value);
+  if (value === "" || value === null || value === undefined || !Number.isFinite(number)) {
+    throw new Error(message);
+  }
+  return number;
+}
+
 function nullableNumber(value) {
   if (value === "" || value === null || value === undefined) return null;
   const number = Number(value);
