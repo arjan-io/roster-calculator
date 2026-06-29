@@ -5,6 +5,7 @@ let paymentPeriods = [];
 let dutyTypes = [];
 let oneOffPayments = [];
 let deductions = [];
+let paymentCalculation = null;
 let dutyFilter = "all";
 let activeFlightFilter = null;
 
@@ -26,6 +27,8 @@ $("#payment-period-form").addEventListener("submit", savePaymentPeriod);
 $("#one-off-form").addEventListener("submit", saveOneOffPayment);
 $("#duty-type-form").addEventListener("submit", saveDutyType);
 $("#deduction-form").addEventListener("submit", saveDeduction);
+$("#payment-calculation-form").addEventListener("submit", calculatePayment);
+$("#withholding-amount").addEventListener("input", updateEstimatedPayable);
 $("#add-component").addEventListener("click", () => addComponentColumn());
 $("#clear-flight-filter").addEventListener("click", async () => {
   activeFlightFilter = null;
