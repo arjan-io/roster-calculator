@@ -71,7 +71,10 @@ CREATE TABLE IF NOT EXISTS duty_types (
   code TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
   sector_value REAL NOT NULL DEFAULT 0,
-  is_paid INTEGER NOT NULL DEFAULT 1
+  is_paid INTEGER NOT NULL DEFAULT 1,
+  tax_treatment TEXT NOT NULL DEFAULT 'normal' CHECK (tax_treatment IN ('normal', 'special', 'none')),
+  payment_component_code TEXT,
+  payment_multiplier REAL NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS misc_duties (
@@ -114,6 +117,8 @@ CREATE TABLE IF NOT EXISTS payment_components (
   calculation_type TEXT NOT NULL CHECK (calculation_type IN ('ratio', 'fixed')),
   ratio REAL,
   amount REAL,
+  payment_treatment TEXT NOT NULL DEFAULT 'normal'
+    CHECK (payment_treatment IN ('normal', 'special', 'net_reimbursement', 'gross_deduction')),
   FOREIGN KEY (payment_period_id) REFERENCES payment_periods(id) ON DELETE CASCADE,
   UNIQUE (payment_period_id, code)
 );
@@ -123,7 +128,9 @@ CREATE TABLE IF NOT EXISTS one_off_payments (
   payment_month INTEGER NOT NULL CHECK (payment_month BETWEEN 1 AND 12),
   payment_year INTEGER NOT NULL,
   description TEXT NOT NULL,
-  amount REAL NOT NULL
+  amount REAL NOT NULL,
+  tax_treatment TEXT NOT NULL DEFAULT 'special'
+    CHECK (tax_treatment IN ('normal', 'special', 'net'))
 );
 
 CREATE TABLE IF NOT EXISTS deductions (
