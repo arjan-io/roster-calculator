@@ -278,6 +278,50 @@ tr.duplicate td { color: #9a3412; background: var(--warning-bg); }
   padding: 4px;
   text-decoration: underline;
 }
+.payment-context {
+  display: flex;
+  gap: 24px;
+  margin: 12px 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.payment-estimate table { min-width: 620px; }
+.payment-estimate th:not(:first-child),
+.payment-estimate td:not(:first-child) {
+  width: 180px;
+  text-align: right;
+}
+.payment-total td {
+  border-top: 2px solid var(--ink);
+  font-weight: bold;
+}
+.payment-subtotal td {
+  background: #edf1f4;
+  font-weight: bold;
+}
+.net-adjustment:first-of-type td { border-top: 2px solid var(--line); }
+.withholding-control {
+  display: flex;
+  align-items: end;
+  justify-content: flex-end;
+  gap: 32px;
+  margin-top: 14px;
+}
+.withholding-control label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.withholding-control div {
+  display: grid;
+  gap: 4px;
+  min-width: 180px;
+  text-align: right;
+}
+.withholding-control div span { color: var(--muted); font-size: 13px; }
+.withholding-control div strong { font-size: 22px; }
+
 .issues-list { display: grid; gap: 8px; }
 .issue-row {
   display: grid;
@@ -306,4 +350,5 @@ tr.duplicate td { color: #9a3412; background: var(--warning-bg); }
   .summary-grid, .data-form, .payment-form { grid-template-columns: 1fr; }
   .data-form .wide { grid-column: auto; }
   .issue-row { grid-template-columns: 1fr; }
+  .payment-context, .withholding-control { align-items: stretch; flex-direction: column; }
 }
