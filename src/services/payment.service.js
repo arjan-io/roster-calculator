@@ -164,6 +164,192 @@ export function deleteDeduction(id) {
   return { deleted: true };
 }
 
+export function calculatePaymentPreview(paymentMonth) {
+  validateMonth(paymentMonth, "Select a valid payment month.");
+  const period = db.prepare(`
+    SELECT id, effective_date AS effectiveDate, basic_salary AS basicSalary
+    FROM payment_periods
+    WHERE effective_date <= ?
+    ORDER BY effective_date DESC
+    LIMIT 1
+  `).get(`${paymentMonth}-31`);
+  if (!period) throw new Error("No payment details apply to this month.");
+
+  const components = db.prepare(`
+    SELECT code, name, calculation_type AS calculationType, ratio, amount,
+           payment_treatment AS paymentTreatment
+    FROM payment_components
+    WHERE payment_period_id = ?
+  `).all(period.id);
+  const componentMap = new Map(components.map((component) => [component.code, component]));
+  const rosterMonth = previousPaymentMonth(paymentMonth);
+  const earnings = [];
+  const grossDeductions = [];
+  const netAdjustments = [];
+
+  addTaxedLine(earnings, "Salary", period.basicSalary / 12, "normal");
+
+  const loyalty = componentMap.get("loyalty");
+  if (loyalty) {
+    addTaxedLine(
+      earnings,
+      loyalty.name || "Loyalty Bonus",
+      componentValue(loyalty, period.basicSalary) / 12,
+      loyalty.paymentTreatment === "normal" ? "normal" : "special"
+    );
+  }
+
+  const travel = componentMap.get("travel");
+  if (travel) {
+    const amount = componentValue(travel, period.basicSalary);
+    if (amount) {
+      addTaxedLine(earnings, "Gross exchange for travel costs", -amount, "normal");
+      netAdjustments.push({ label: "Travel costs reimbursement", amount });
+    }
+  }
+
+  const sectorRate = componentMap.get("sector");
+  const sectorUnits = db.prepare(`
+    SELECT COALESCE(SUM(
+      CASE
+        WHEN distance_nm <= 399 THEN 0.8
+        WHEN distance_nm <= 1000 THEN 1.2
+        WHEN distance_nm <= 1500 THEN 1.5
+        ELSE 2.5
+      END
+    ), 0) AS units
+    FROM flights
+    WHERE substr(flight_date, 1, 7) = ?
+      AND distance_nm IS NOT NULL
+  `).get(rosterMonth).units;
+  if (sectorRate && sectorUnits) {
+    addTaxedLine(
+      earnings,
+      "Sector Pay",
+      sectorUnits * componentValue(sectorRate, period.basicSalary),
+      "normal",
+      { quantity: sectorUnits }
+    );
+  }
+
+  const dutyRows = db.prepare(`
+    SELECT duty_types.name, duty_types.sector_value AS sectorValue,
+           duty_types.tax_treatment AS taxTreatment,
+           duty_types.payment_component_code AS paymentComponentCode,
+           duty_types.payment_multiplier AS paymentMultiplier,
+           COUNT(*) AS quantity
+    FROM misc_duties
+    JOIN duty_types ON duty_types.id = misc_duties.duty_type_id
+    WHERE substr(misc_duties.duty_date, 1, 7) = ?
+      AND duty_types.is_paid = 1
+    GROUP BY duty_types.id
+    ORDER BY duty_types.name
+  `).all(rosterMonth);
+
+  for (const duty of dutyRows) {
+    let unitAmount = 0;
+    if (Number(duty.sectorValue)) {
+      unitAmount = Number(duty.sectorValue) * componentValue(sectorRate, period.basicSalary);
+    } else if (duty.paymentComponentCode) {
+      unitAmount =
+        componentValue(componentMap.get(duty.paymentComponentCode), period.basicSalary) *
+        Number(duty.paymentMultiplier || 1);
+    }
+    const amount = duty.quantity * unitAmount;
+    if (!amount) continue;
+    if (duty.taxTreatment === "none") {
+      netAdjustments.push({ label: duty.name, amount, quantity: duty.quantity });
+    } else {
+      addTaxedLine(earnings, duty.name, amount, duty.taxTreatment, { quantity: duty.quantity });
+    }
+  }
+
+  const [year, month] = paymentMonth.split("-").map(Number);
+  const oneOffs = db.prepare(`
+    SELECT description, amount, tax_treatment AS taxTreatment
+    FROM one_off_payments
+    WHERE payment_year = ? AND payment_month = ?
+    ORDER BY id
+  `).all(year, month);
+  for (const payment of oneOffs) {
+    if (payment.taxTreatment === "net") {
+      netAdjustments.push({ label: payment.description, amount: payment.amount });
+    } else {
+      addTaxedLine(earnings, payment.description, payment.amount, payment.taxTreatment);
+    }
+  }
+
+  const normalPercentageBasis = earnings.reduce(
+    (total, line) => total + Math.max(Number(line.normal || 0), 0),
+    0
+  );
+  const deductionRows = db.prepare(`
+    SELECT description, amount, payment_stage AS paymentStage,
+           calculation_type AS calculationType
+    FROM deductions
+    WHERE start_month <= ?
+      AND (end_month IS NULL OR end_month = '' OR end_month >= ?)
+    ORDER BY id
+  `).all(paymentMonth, paymentMonth);
+
+  for (const deduction of deductionRows) {
+    const amount = deduction.calculationType === "normal_percentage"
+      ? normalPercentageBasis * Number(deduction.amount) / 100
+      : Number(deduction.amount);
+    const line = { label: deduction.description, amount: -amount };
+    if (deduction.paymentStage === "gross") {
+      grossDeductions.push(line);
+    } else {
+      netAdjustments.push(line);
+    }
+  }
+
+  const normal = earnings.reduce((total, line) => total + Number(line.normal || 0), 0);
+  const special = earnings.reduce((total, line) => total + Number(line.special || 0), 0);
+  const grossDeductionTotal = grossDeductions.reduce((total, line) => total + line.amount, 0);
+  const netAdjustmentTotal = netAdjustments.reduce((total, line) => total + line.amount, 0);
+
+  return {
+    paymentMonth,
+    rosterMonth,
+    paymentPeriod: period,
+    earnings,
+    grossDeductions,
+    netAdjustments,
+    totals: {
+      normal,
+      special,
+      gross: normal + special,
+      taxableBasis: normal + special + grossDeductionTotal,
+      grossDeductions: grossDeductionTotal,
+      netAdjustments: netAdjustmentTotal
+    }
+  };
+}
+
+function addTaxedLine(lines, label, amount, treatment, extra = {}) {
+  if (!amount) return;
+  lines.push({
+    label,
+    normal: treatment === "normal" ? amount : 0,
+    special: treatment === "special" ? amount : 0,
+    ...extra
+  });
+}
+
+function componentValue(component, basicSalary) {
+  if (!component) return 0;
+  return component.calculationType === "ratio"
+    ? Number(basicSalary) * Number(component.ratio || 0)
+    : Number(component.amount || 0);
+}
+
+function previousPaymentMonth(value) {
+  const [year, month] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 2, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
 function parsePaymentMonth(value, paymentMonth, paymentYear) {
   if (value) {
     validateMonth(value, "Select a valid payment month.");
