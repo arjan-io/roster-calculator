@@ -789,6 +789,10 @@ const initialPage = location.hash.slice(1);
 if (initialPage && $("[data-page='" + initialPage + "']")) showPage(initialPage);
 await loadAll();
 await resetPaymentForm();
+const now = new Date();
+$("#calculation-month").value =
+  `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+await calculatePayment();
 
 async function loadAll() {
   await Promise.all([
