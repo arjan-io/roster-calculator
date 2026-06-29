@@ -473,6 +473,104 @@ async function loadIssues() {
   }));
 }
 
+async function calculatePayment(event) {
+  event?.preventDefault();
+  const month = $("#calculation-month").value;
+  if (!month) return;
+
+  try {
+    paymentCalculation = await api(`/api/payments/calculate?month=${encodeURIComponent(month)}`);
+    renderPaymentCalculation();
+  } catch (error) {
+    paymentCalculation = null;
+    $("#payment-calculation-status").textContent = error.message;
+    $("#payment-calculation-body").replaceChildren();
+    $("#estimated-payable").textContent = "-";
+  }
+}
+
+function renderPaymentCalculation() {
+  const calculation = paymentCalculation;
+  $("#payment-calculation-status").textContent =
+    "Estimate for checking expected payslip items; tax withholding is entered from the payslip.";
+  $("#calculation-roster-month").textContent = calculation.rosterMonth;
+  $("#calculation-rate-date").textContent = calculation.paymentPeriod.effectiveDate;
+
+  const rows = [];
+  for (const line of calculation.earnings) {
+    rows.push(paymentLineRow(line.label, line.normal, line.special));
+  }
+  rows.push(paymentLineRow(
+    "Gross pay",
+    calculation.totals.normal,
+    calculation.totals.special,
+    "payment-total"
+  ));
+
+  for (const line of calculation.grossDeductions) {
+    rows.push(paymentLineRow(line.label, line.amount, 0));
+  }
+  if (calculation.grossDeductions.length) {
+    rows.push(paymentLineRow(
+      "Taxable basis",
+      calculation.totals.taxableBasis,
+      0,
+      "payment-subtotal"
+    ));
+  }
+
+  for (const line of calculation.netAdjustments) {
+    rows.push(paymentLineRow(line.label, line.amount, 0, "net-adjustment"));
+  }
+  $("#payment-calculation-body").replaceChildren(...rows);
+  updateEstimatedPayable();
+}
+
+function paymentLineRow(label, normal, special, className = "") {
+  const tr = document.createElement("tr");
+  if (className) tr.className = className;
+  const description = document.createElement("td");
+  description.textContent = label;
+  const normalCell = document.createElement("td");
+  normalCell.textContent = normal ? money(normal) : "";
+  const specialCell = document.createElement("td");
+  specialCell.textContent = special ? money(special) : "";
+  tr.append(description, normalCell, specialCell);
+  return tr;
+}
+
+function updateEstimatedPayable() {
+  if (!paymentCalculation) return;
+  const withholding = Number($("#withholding-amount").value || 0);
+  const payable =
+    paymentCalculation.totals.taxableBasis -
+    withholding +
+    paymentCalculation.totals.netAdjustments;
+  $("#estimated-payable").textContent = money(payable);
+}
+
+function populateDutyComponentSelect() {
+  const select = $("#duty-component-select");
+  const selected = select.value;
+  const components = new Map();
+  for (const period of paymentPeriods) {
+    for (const component of period.components) {
+      if (!components.has(component.code)) components.set(component.code, component.name);
+    }
+  }
+  select.replaceChildren(
+    new Option("Use sector value", ""),
+    ...[...components].map(([code, name]) => new Option(name, code))
+  );
+  select.value = selected;
+}
+
+function taxTreatmentLabel(value) {
+  if (value === "special") return "Bijzonder";
+  if (value === "none" || value === "net") return "Net / not taxable";
+  return "Normaal";
+}
+
 function renderDuties() {
   const filtered = duties.filter((duty) =>
     dutyFilter === "all" ||
