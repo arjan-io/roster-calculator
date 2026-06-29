@@ -133,7 +133,28 @@ function migratePaymentData() {
   const version = db.prepare(
     "SELECT value FROM app_meta WHERE key = 'payment_data_version'"
   ).get()?.value;
-  if (version === "1") return;
+  if (version === "2") return;
+
+  const dutyColumns = db.prepare("PRAGMA table_info(duty_types)").all();
+  if (!dutyColumns.some((column) => column.name === "tax_treatment")) {
+    db.exec("ALTER TABLE duty_types ADD COLUMN tax_treatment TEXT NOT NULL DEFAULT 'normal'");
+  }
+  if (!dutyColumns.some((column) => column.name === "payment_component_code")) {
+    db.exec("ALTER TABLE duty_types ADD COLUMN payment_component_code TEXT");
+  }
+  if (!dutyColumns.some((column) => column.name === "payment_multiplier")) {
+    db.exec("ALTER TABLE duty_types ADD COLUMN payment_multiplier REAL NOT NULL DEFAULT 1");
+  }
+
+  const componentColumns = db.prepare("PRAGMA table_info(payment_components)").all();
+  if (!componentColumns.some((column) => column.name === "payment_treatment")) {
+    db.exec("ALTER TABLE payment_components ADD COLUMN payment_treatment TEXT NOT NULL DEFAULT 'normal'");
+  }
+
+  const oneOffColumns = db.prepare("PRAGMA table_info(one_off_payments)").all();
+  if (!oneOffColumns.some((column) => column.name === "tax_treatment")) {
+    db.exec("ALTER TABLE one_off_payments ADD COLUMN tax_treatment TEXT NOT NULL DEFAULT 'special'");
+  }
 
   const columns = db.prepare("PRAGMA table_info(deductions)").all();
   if (!columns.some((column) => column.name === "start_month")) {
@@ -148,6 +169,18 @@ function migratePaymentData() {
 
   db.transaction(() => {
     db.exec(`
+      UPDATE payment_components
+      SET payment_treatment = CASE code
+        WHEN 'loyalty' THEN 'special'
+        WHEN 'travel' THEN 'net_reimbursement'
+        WHEN 'pension' THEN 'gross_deduction'
+        ELSE 'normal'
+      END;
+
+      UPDATE one_off_payments
+      SET tax_treatment = 'special'
+      WHERE tax_treatment IS NULL OR tax_treatment NOT IN ('normal', 'special', 'net');
+
       UPDATE deductions
       SET start_month = substr(effective_date, 1, 7)
       WHERE start_month IS NULL OR start_month = '';
@@ -180,7 +213,7 @@ function migratePaymentData() {
     db.exec(`
       DELETE FROM deductions WHERE amount = 0;
       INSERT INTO app_meta (key, value)
-      VALUES ('payment_data_version', '1')
+      VALUES ('payment_data_version', '2')
       ON CONFLICT(key) DO UPDATE SET value = excluded.value;
     `);
   })();
