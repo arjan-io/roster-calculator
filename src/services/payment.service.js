@@ -116,20 +116,23 @@ export function deleteOneOffPayment(id) {
 export function listDeductions() {
   return db.prepare(`
     SELECT id, start_month AS startMonth, end_month AS endMonth,
-           payment_stage AS paymentStage, description, amount
+           payment_stage AS paymentStage, calculation_type AS calculationType, description, amount
     FROM deductions
     WHERE start_month IS NOT NULL
     ORDER BY start_month DESC, id DESC
   `).all();
 }
 
-export function saveDeduction({ id, startMonth, endMonth, paymentStage, description, amount }) {
+export function saveDeduction({
+  id, startMonth, endMonth, paymentStage, calculationType, description, amount
+}) {
   validateMonth(startMonth, "Select a valid start month.");
   if (endMonth) validateMonth(endMonth, "Select a valid end month.");
   if (endMonth && endMonth < startMonth) {
     throw new Error("End month cannot be before start month.");
   }
   const stage = paymentStage === "gross" ? "gross" : "net";
+  const type = calculationType === "normal_percentage" ? "normal_percentage" : "fixed";
   const label = clean(description);
   if (!label) throw new Error("Enter a deduction name.");
   const deductionAmount = requiredNumber(amount, "Enter a valid deduction amount.");
@@ -138,19 +141,19 @@ export function saveDeduction({ id, startMonth, endMonth, paymentStage, descript
     const result = db.prepare(`
       UPDATE deductions
       SET effective_date = ?, start_month = ?, end_month = ?,
-          payment_stage = ?, description = ?, amount = ?
+          payment_stage = ?, calculation_type = ?, description = ?, amount = ?
       WHERE id = ?
     `).run(
       `${startMonth}-01`, startMonth, endMonth || null,
-      stage, label, deductionAmount, Number(id)
+      stage, type, label, deductionAmount, Number(id)
     );
     if (!result.changes) throw new Error("Deduction not found.");
   } else {
     db.prepare(`
       INSERT INTO deductions (
-        effective_date, start_month, end_month, payment_stage, description, amount
-      ) VALUES (?, ?, ?, ?, ?, ?)
-    `).run(`${startMonth}-01`, startMonth, endMonth || null, stage, label, deductionAmount);
+        effective_date, start_month, end_month, payment_stage, calculation_type, description, amount
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(`${startMonth}-01`, startMonth, endMonth || null, stage, type, label, deductionAmount);
   }
   return { saved: true };
 }
