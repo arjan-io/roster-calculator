@@ -318,15 +318,18 @@ function importPaymentPeriod(values) {
   ];
   const insert = db.prepare(`
     INSERT INTO payment_components (
-      payment_period_id, code, name, calculation_type, ratio, amount
-    ) VALUES (?, ?, ?, ?, ?, ?)
+      payment_period_id, code, name, calculation_type, ratio, amount, payment_treatment
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
 
   for (const [code, name, value, isRatio] of components) {
     insert.run(
       periodResult.id, code, name, isRatio ? "ratio" : "fixed",
       isRatio ? value / values.basicSalary : null,
-      isRatio ? null : value
+      isRatio ? null : value,
+      code === "loyalty" ? "special" :
+        code === "travel" ? "net_reimbursement" :
+          code === "pension" ? "gross_deduction" : "normal"
     );
   }
 }
@@ -339,8 +342,9 @@ function ratioMatches(value, basicSalary, ratios) {
 
 function importOneOffPayments() {
   const insert = db.prepare(`
-    INSERT INTO one_off_payments (payment_month, payment_year, description, amount)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO one_off_payments (
+      payment_month, payment_year, description, amount, tax_treatment
+    ) VALUES (?, ?, ?, ?, 'special')
   `);
 
   let count = 0;
@@ -362,8 +366,8 @@ function importOneOffPayments() {
 function importDeductions() {
   const insert = db.prepare(`
     INSERT INTO deductions (
-      effective_date, start_month, end_month, payment_stage, description, amount
-    ) VALUES (?, ?, ?, ?, ?, ?)
+      effective_date, start_month, end_month, payment_stage, calculation_type, description, amount
+    ) VALUES (?, ?, ?, ?, 'fixed', ?, ?)
   `);
   const changes = new Map([
     ["vnv", []],
