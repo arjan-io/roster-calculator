@@ -28,6 +28,7 @@ db.exec(`
 `);
 
 migrateFlightIdentity();
+migratePaymentData();
 
 function migrateFlightIdentity() {
   if (!tableExists("flights")) return;
@@ -125,6 +126,69 @@ function migrateFlightIdentity() {
   console.log(
     `Flight identity migration complete: ${beforeCount - afterCount} duplicates consolidated; ${unresolvedCount} non-IATA flights remain.`
   );
+}
+
+function migratePaymentData() {
+  if (!tableExists("deductions")) return;
+  const version = db.prepare(
+    "SELECT value FROM app_meta WHERE key = 'payment_data_version'"
+  ).get()?.value;
+  if (version === "1") return;
+
+  const columns = db.prepare("PRAGMA table_info(deductions)").all();
+  if (!columns.some((column) => column.name === "start_month")) {
+    db.exec("ALTER TABLE deductions ADD COLUMN start_month TEXT");
+  }
+  if (!columns.some((column) => column.name === "end_month")) {
+    db.exec("ALTER TABLE deductions ADD COLUMN end_month TEXT");
+  }
+  if (!columns.some((column) => column.name === "payment_stage")) {
+    db.exec("ALTER TABLE deductions ADD COLUMN payment_stage TEXT NOT NULL DEFAULT 'net'");
+  }
+
+  db.transaction(() => {
+    db.exec(`
+      UPDATE deductions
+      SET start_month = substr(effective_date, 1, 7)
+      WHERE start_month IS NULL OR start_month = '';
+
+      UPDATE deductions
+      SET payment_stage = CASE
+        WHEN lower(description) = 'pension' THEN 'gross'
+        ELSE 'net'
+      END
+      WHERE payment_stage IS NULL OR payment_stage NOT IN ('gross', 'net');
+    `);
+
+    const rows = db.prepare(`
+      SELECT id, description, start_month AS startMonth
+      FROM deductions
+      ORDER BY lower(description), start_month, id
+    `).all();
+    const updateEnd = db.prepare("UPDATE deductions SET end_month = ? WHERE id = ?");
+
+    for (let index = 0; index < rows.length; index += 1) {
+      const current = rows[index];
+      const next = rows[index + 1];
+      const endMonth = next && next.description.toLowerCase() === current.description.toLowerCase()
+        ? previousMonth(next.startMonth)
+        : null;
+      updateEnd.run(endMonth, current.id);
+    }
+
+    db.exec(`
+      DELETE FROM deductions WHERE amount = 0;
+      INSERT INTO app_meta (key, value)
+      VALUES ('payment_data_version', '1')
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value;
+    `);
+  })();
+}
+
+function previousMonth(value) {
+  const [year, month] = String(value).split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 2, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 function tableExists(name) {
