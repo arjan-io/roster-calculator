@@ -361,28 +361,57 @@ function importOneOffPayments() {
 
 function importDeductions() {
   const insert = db.prepare(`
-    INSERT INTO deductions (effective_date, description, amount)
-    VALUES (?, ?, ?)
+    INSERT INTO deductions (
+      effective_date, start_month, end_month, payment_stage, description, amount
+    ) VALUES (?, ?, ?, ?, ?, ?)
   `);
+  const changes = new Map([
+    ["vnv", []],
+    ["saye", []],
+    ["pension", []]
+  ]);
 
-  let count = 0;
   for (const row of readTable("Data pay", "R2:U8")) {
     const effectiveDate = dateToIso(row.date);
-    if (!effectiveDate) {
-      continue;
-    }
+    if (!effectiveDate) continue;
 
-    for (const description of ["vnv", "saye", "pension"]) {
+    for (const description of changes.keys()) {
       if (row[description] === null || row[description] === undefined || row[description] === "") {
         continue;
       }
+      changes.get(description).push({
+        effectiveDate,
+        startMonth: effectiveDate.slice(0, 7),
+        amount: numberOrZero(row[description])
+      });
+    }
+  }
 
-      insert.run(effectiveDate, description, numberOrZero(row[description]));
+  let count = 0;
+  for (const [description, entries] of changes) {
+    for (let index = 0; index < entries.length; index += 1) {
+      const entry = entries[index];
+      if (entry.amount === 0) continue;
+      const next = entries[index + 1];
+      insert.run(
+        entry.effectiveDate,
+        entry.startMonth,
+        next ? monthBefore(next.startMonth) : null,
+        description === "pension" ? "gross" : "net",
+        description,
+        entry.amount
+      );
       count += 1;
     }
   }
 
   return count;
+}
+
+function monthBefore(value) {
+  const [year, month] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 2, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 function readTable(sheetName, range) {
