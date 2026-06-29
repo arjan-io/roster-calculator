@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  calculatePaymentPreview,
   deleteDeduction,
   deleteOneOffPayment,
   deletePaymentPeriod,
@@ -13,6 +14,10 @@ import {
 } from "../services/payment.service.js";
 
 const router = express.Router();
+
+router.get("/calculate", (req, res, next) => {
+  try { res.json(calculatePaymentPreview(req.query.month)); } catch (error) { next(error); }
+});
 
 router.get("/periods", (_req, res) => res.json(listPaymentPeriods()));
 router.get("/periods/defaults", (_req, res) => res.json(paymentPeriodDefaults()));
