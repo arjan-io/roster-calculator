@@ -64,5 +64,34 @@ export function listIssues() {
     });
   }
 
+  const unpricedDutyTypes = db.prepare(`
+    SELECT duty_types.code, duty_types.name, duty_types.payment_component_code AS componentCode
+    FROM duty_types
+    LEFT JOIN payment_components
+      ON payment_components.code = duty_types.payment_component_code
+     AND payment_components.payment_period_id = (
+       SELECT id FROM payment_periods ORDER BY effective_date DESC LIMIT 1
+     )
+    WHERE duty_types.is_paid = 1
+      AND duty_types.sector_value = 0
+      AND (
+        duty_types.payment_component_code IS NULL
+        OR duty_types.payment_component_code = ''
+        OR payment_components.id IS NULL
+      )
+    ORDER BY duty_types.name
+  `).all();
+
+  for (const dutyType of unpricedDutyTypes) {
+    issues.push({
+      type: "unpriced_duty_type",
+      label: `${dutyType.name} has no payment rate`,
+      detail: dutyType.componentCode
+        ? `Component ${dutyType.componentCode} is missing from the latest Payment details`
+        : "Assign a payment component or a sector value",
+      target: "duty-types"
+    });
+  }
+
   return issues;
 }
