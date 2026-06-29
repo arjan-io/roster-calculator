@@ -379,15 +379,23 @@ async function loadAirports() {
 async function loadDuties() {
   const [types, items] = await Promise.all([api("/api/duties/types"), api("/api/duties")]);
   duties = items;
+  dutyTypes = types;
   const select = $("#duty-form [name='dutyTypeId']");
   const selected = select.value;
   select.replaceChildren(new Option("Select duty", ""), ...types.map((type) => new Option(type.name, type.id)));
   select.value = selected;
   renderDuties();
+  $("#duty-types-body").replaceChildren(...dutyTypes.map((type) => actionRow([
+    type.code,
+    type.name,
+    type.sectorValue,
+    type.isPaid ? "Yes" : "No"
+  ], type.id)));
 }
 
 async function loadPaymentPeriods() {
-  paymentPeriods = await api("/api/payments/periods");
+  paymentPeriods = (await api("/api/payments/periods"))
+    .sort((a, b) => b.effectiveDate.localeCompare(a.effectiveDate));
   const definitions = new Map();
   for (const period of [...paymentPeriods].reverse()) {
     for (const component of period.components) {
@@ -406,6 +414,26 @@ async function loadPaymentPeriods() {
     }
     return actionRow(values, period.id);
   }));
+}
+
+async function loadOneOffPayments() {
+  oneOffPayments = await api("/api/payments/one-offs");
+  $("#one-offs-body").replaceChildren(...oneOffPayments.map((item) => actionRow([
+    `${item.paymentYear}-${String(item.paymentMonth).padStart(2, "0")}`,
+    item.description,
+    money(item.amount)
+  ], item.id)));
+}
+
+async function loadDeductions() {
+  deductions = await api("/api/payments/deductions");
+  $("#deductions-body").replaceChildren(...deductions.map((item) => actionRow([
+    item.startMonth,
+    item.endMonth || "Ongoing",
+    item.paymentStage === "gross" ? "Gross" : "Net",
+    item.description,
+    money(item.amount)
+  ], item.id)));
 }
 
 async function loadIssues() {
