@@ -2,6 +2,9 @@ let pendingImport = null;
 let airports = [];
 let duties = [];
 let paymentPeriods = [];
+let dutyTypes = [];
+let oneOffPayments = [];
+let deductions = [];
 let dutyFilter = "all";
 let activeFlightFilter = null;
 
@@ -20,6 +23,9 @@ $("#commit-button").addEventListener("click", commitImport);
 $("#airport-form").addEventListener("submit", saveAirport);
 $("#duty-form").addEventListener("submit", saveDuty);
 $("#payment-period-form").addEventListener("submit", savePaymentPeriod);
+$("#one-off-form").addEventListener("submit", saveOneOffPayment);
+$("#duty-type-form").addEventListener("submit", saveDutyType);
+$("#deduction-form").addEventListener("submit", saveDeduction);
 $("#add-component").addEventListener("click", () => addComponentColumn());
 $("#clear-flight-filter").addEventListener("click", async () => {
   activeFlightFilter = null;
@@ -28,6 +34,10 @@ $("#clear-flight-filter").addEventListener("click", async () => {
 $("#paid-toggle").addEventListener("click", () => {
   const paid = $("#duty-form [name='paid']").value !== "1";
   setPaidToggle(paid);
+});
+$("#duty-type-paid-toggle").addEventListener("click", () => {
+  const paid = $("#duty-type-form [name='isPaid']").value !== "1";
+  setDutyTypePaidToggle(paid);
 });
 for (const button of $$("[data-duty-filter]")) {
   button.addEventListener("click", () => {
@@ -39,6 +49,9 @@ for (const button of $$("[data-duty-filter]")) {
 $("[data-cancel='airport']").addEventListener("click", resetAirportForm);
 $("[data-cancel='duty']").addEventListener("click", resetDutyForm);
 $("[data-cancel='payment']").addEventListener("click", resetPaymentForm);
+$("[data-cancel='one-off']").addEventListener("click", resetOneOffForm);
+$("[data-cancel='duty-type']").addEventListener("click", resetDutyTypeForm);
+$("[data-cancel='deduction']").addEventListener("click", resetDeductionForm);
 
 $("#airport-form [name='lidoCoordinate']").addEventListener("blur", (event) => {
   event.target.value = formatCoordinate(event.target.value);
@@ -48,6 +61,9 @@ $("#flights-body").addEventListener("click", handleFlightAction);
 $("#airports-body").addEventListener("click", handleAirportAction);
 $("#duties-body").addEventListener("click", handleDutyAction);
 $("#payment-periods-body").addEventListener("click", handlePaymentAction);
+$("#one-offs-body").addEventListener("click", handleOneOffAction);
+$("#duty-types-body").addEventListener("click", handleDutyTypeAction);
+$("#deductions-body").addEventListener("click", handleDeductionAction);
 $("#component-editor").addEventListener("click", (event) => {
   if (event.target.closest("[data-remove-component]")) {
     event.target.closest(".component-column").remove();
