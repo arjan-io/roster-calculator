@@ -285,6 +285,18 @@ tr.duplicate td { color: #9a3412; background: var(--warning-bg); }
   color: var(--muted);
   font-size: 14px;
 }
+.payment-detail-section { margin-top: 24px; }
+.payment-detail-section + .payment-detail-section { margin-top: 30px; }
+.payment-detail-section .section-heading { margin-bottom: 8px; }
+.payment-detail-section .section-heading h3 { margin: 0 0 3px; }
+.payment-detail-section .section-heading p { margin: 0; color: var(--muted); }
+.payment-breakdown table { min-width: 720px; }
+.payment-breakdown th:not(:first-child),
+.payment-breakdown td:not(:first-child) { text-align: right; }
+.payment-breakdown th:nth-child(3),
+.payment-breakdown td:nth-child(3) { text-align: left; }
+.payment-breakdown tbody tr:has(td:nth-child(2):first-of-type) { min-height: 38px; }
+.payment-summary-section { border-top: 1px solid var(--line); padding-top: 24px; }
 .payment-estimate table { min-width: 620px; }
 .payment-estimate th:not(:first-child),
 .payment-estimate td:not(:first-child) {
