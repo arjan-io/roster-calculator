@@ -28,6 +28,8 @@ $("#one-off-form").addEventListener("submit", saveOneOffPayment);
 $("#duty-type-form").addEventListener("submit", saveDutyType);
 $("#deduction-form").addEventListener("submit", saveDeduction);
 $("#payment-calculation-form").addEventListener("submit", calculatePayment);
+$("#previous-payment-month").addEventListener("click", () => movePaymentMonth(-1));
+$("#next-payment-month").addEventListener("click", () => movePaymentMonth(1));
 $("#add-component").addEventListener("click", () => addComponentColumn());
 $("#clear-flight-filter").addEventListener("click", async () => {
   activeFlightFilter = null;
@@ -447,9 +449,9 @@ async function loadDeductions() {
   $("#deductions-body").replaceChildren(...deductions.map((item) => actionRow([
     item.startMonth,
     item.endMonth || "Ongoing",
+    item.description,
     item.paymentStage === "gross" ? "Gross" : "Net",
     item.calculationType === "normal_percentage" ? "% of Normaal" : "Fixed",
-    item.description,
     item.calculationType === "normal_percentage" ? `${item.amount}%` : money(item.amount)
   ], item.id)));
 }
@@ -496,6 +498,15 @@ async function calculatePayment(event) {
     $("#payment-calculation-body").replaceChildren();
     $("#estimated-payable").textContent = "-";
   }
+}
+
+async function movePaymentMonth(offset) {
+  const input = $("#calculation-month");
+  if (!input.value) return;
+  const [year, month] = input.value.split("-").map(Number);
+  const nextMonth = new Date(year, month - 1 + offset, 1);
+  input.value = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, "0")}`;
+  await calculatePayment();
 }
 
 function renderPaymentCalculation() {
