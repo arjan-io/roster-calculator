@@ -153,11 +153,12 @@ function migratePaymentData() {
       WHERE start_month IS NULL OR start_month = '';
 
       UPDATE deductions
-      SET payment_stage = CASE
-        WHEN lower(description) = 'pension' THEN 'gross'
-        ELSE 'net'
-      END
+      SET payment_stage = 'net'
       WHERE payment_stage IS NULL OR payment_stage NOT IN ('gross', 'net');
+
+      UPDATE deductions
+      SET payment_stage = 'gross'
+      WHERE lower(description) = 'pension';
     `);
 
     const rows = db.prepare(`
