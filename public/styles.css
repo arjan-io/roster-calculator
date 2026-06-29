@@ -285,6 +285,21 @@ tr.duplicate td { color: #9a3412; background: var(--warning-bg); }
   color: var(--muted);
   font-size: 14px;
 }
+.payment-calculation-form {
+  align-items: end;
+}
+.payment-calculation-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.payment-month-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: -10px 0 12px;
+}
 .payment-detail-section { margin-top: 24px; }
 .payment-detail-section + .payment-detail-section { margin-top: 30px; }
 .payment-detail-section .section-heading { margin-bottom: 8px; }
