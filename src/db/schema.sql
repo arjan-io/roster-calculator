@@ -139,6 +139,8 @@ CREATE TABLE IF NOT EXISTS deductions (
   start_month TEXT,
   end_month TEXT,
   payment_stage TEXT NOT NULL DEFAULT 'net' CHECK (payment_stage IN ('gross', 'net')),
+  calculation_type TEXT NOT NULL DEFAULT 'fixed'
+    CHECK (calculation_type IN ('fixed', 'normal_percentage')),
   description TEXT NOT NULL,
   amount REAL NOT NULL
 );
