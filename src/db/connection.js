@@ -133,7 +133,7 @@ function migratePaymentData() {
   const version = db.prepare(
     "SELECT value FROM app_meta WHERE key = 'payment_data_version'"
   ).get()?.value;
-  if (version === "2") return;
+  if (version === "3") return;
 
   const dutyColumns = db.prepare("PRAGMA table_info(duty_types)").all();
   if (!dutyColumns.some((column) => column.name === "tax_treatment")) {
@@ -165,6 +165,9 @@ function migratePaymentData() {
   }
   if (!columns.some((column) => column.name === "payment_stage")) {
     db.exec("ALTER TABLE deductions ADD COLUMN payment_stage TEXT NOT NULL DEFAULT 'net'");
+  }
+  if (!columns.some((column) => column.name === "calculation_type")) {
+    db.exec("ALTER TABLE deductions ADD COLUMN calculation_type TEXT NOT NULL DEFAULT 'fixed'");
   }
 
   db.transaction(() => {
@@ -213,7 +216,7 @@ function migratePaymentData() {
     db.exec(`
       DELETE FROM deductions WHERE amount = 0;
       INSERT INTO app_meta (key, value)
-      VALUES ('payment_data_version', '2')
+      VALUES ('payment_data_version', '3')
       ON CONFLICT(key) DO UPDATE SET value = excluded.value;
     `);
   })();
