@@ -7,7 +7,8 @@ export function listPaymentPeriods() {
   `).all();
   const components = db.prepare(`
     SELECT id, payment_period_id AS paymentPeriodId, code, name,
-           calculation_type AS calculationType, ratio, amount
+           calculation_type AS calculationType, ratio, amount,
+           payment_treatment AS paymentTreatment
     FROM payment_components ORDER BY id
   `).all();
 
@@ -39,8 +40,8 @@ export function savePaymentPeriod({ id, effectiveDate, basicSalary, components =
 
     const insert = db.prepare(`
       INSERT INTO payment_components (
-        payment_period_id, code, name, calculation_type, ratio, amount
-      ) VALUES (?, ?, ?, ?, ?, ?)
+        payment_period_id, code, name, calculation_type, ratio, amount, payment_treatment
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     for (const component of components) {
       const type = component.calculationType === "fixed" ? "fixed" : "ratio";
@@ -50,7 +51,8 @@ export function savePaymentPeriod({ id, effectiveDate, basicSalary, components =
         clean(component.name),
         type,
         type === "ratio" ? nullableNumber(component.ratio) : null,
-        type === "fixed" ? nullableNumber(component.amount) : null
+        type === "fixed" ? nullableNumber(component.amount) : null,
+        normalizePaymentTreatment(component.paymentTreatment, component.code)
       );
     }
     return listPaymentPeriods().find((period) => period.id === periodId);
@@ -62,8 +64,8 @@ export function paymentPeriodDefaults() {
   if (!latest) return { basicSalary: 0, components: [] };
   return {
     basicSalary: latest.basicSalary,
-    components: latest.components.map(({ code, name, calculationType, ratio, amount }) => ({
-      code, name, calculationType, ratio, amount
+    components: latest.components.map(({ code, name, calculationType, ratio, amount, paymentTreatment }) => ({
+      code, name, calculationType, ratio, amount, paymentTreatment
     }))
   };
 }
@@ -77,29 +79,30 @@ export function deletePaymentPeriod(id) {
 export function listOneOffPayments() {
   return db.prepare(`
     SELECT id, payment_month AS paymentMonth, payment_year AS paymentYear,
-           description, amount
+           description, amount, tax_treatment AS taxTreatment
     FROM one_off_payments
     ORDER BY payment_year DESC, payment_month DESC, id DESC
   `).all();
 }
 
-export function saveOneOffPayment({ id, paymentMonth, paymentYear, month, description, amount }) {
+export function saveOneOffPayment({ id, paymentMonth, paymentYear, month, description, amount, taxTreatment }) {
   const parsed = parsePaymentMonth(month, paymentMonth, paymentYear);
   const paymentAmount = requiredNumber(amount, "Enter a valid amount.");
   const label = clean(description) || "One-off payment";
+  const treatment = ["normal", "net"].includes(taxTreatment) ? taxTreatment : "special";
 
   if (id) {
     const result = db.prepare(`
       UPDATE one_off_payments
-      SET payment_month = ?, payment_year = ?, description = ?, amount = ?
+      SET payment_month = ?, payment_year = ?, description = ?, amount = ?, tax_treatment = ?
       WHERE id = ?
-    `).run(parsed.month, parsed.year, label, paymentAmount, Number(id));
+    `).run(parsed.month, parsed.year, label, paymentAmount, treatment, Number(id));
     if (!result.changes) throw new Error("One-off payment not found.");
   } else {
     db.prepare(`
-      INSERT INTO one_off_payments (payment_month, payment_year, description, amount)
-      VALUES (?, ?, ?, ?)
-    `).run(parsed.month, parsed.year, label, paymentAmount);
+      INSERT INTO one_off_payments (payment_month, payment_year, description, amount, tax_treatment)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(parsed.month, parsed.year, label, paymentAmount, treatment);
   }
   return { saved: true };
 }
@@ -182,6 +185,15 @@ function requiredNumber(value, message) {
     throw new Error(message);
   }
   return number;
+}
+
+function normalizePaymentTreatment(value, code) {
+  const allowed = ["normal", "special", "net_reimbursement", "gross_deduction"];
+  if (allowed.includes(value)) return value;
+  if (code === "loyalty") return "special";
+  if (code === "travel") return "net_reimbursement";
+  if (code === "pension") return "gross_deduction";
+  return "normal";
 }
 
 function nullableNumber(value) {
