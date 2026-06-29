@@ -484,6 +484,8 @@ async function calculatePayment(event) {
   } catch (error) {
     paymentCalculation = null;
     $("#payment-calculation-status").textContent = error.message;
+    $("#sector-breakdown-body").replaceChildren();
+    $("#duty-breakdown-body").replaceChildren();
     $("#payment-calculation-body").replaceChildren();
     $("#estimated-payable").textContent = "-";
   }
@@ -495,6 +497,25 @@ function renderPaymentCalculation() {
     "Estimate for checking expected payslip items; tax withholding is entered from the payslip.";
   $("#calculation-roster-month").textContent = calculation.rosterMonth;
   $("#calculation-rate-date").textContent = calculation.paymentPeriod.effectiveDate;
+
+  $("#sector-breakdown-body").replaceChildren(...calculation.sectorBreakdown.map((line) =>
+    tableRow([
+      line.label,
+      line.count,
+      formatNumber(line.weight),
+      formatNumber(line.nominal),
+      money(line.amount)
+    ])
+  ));
+  $("#duty-breakdown-body").replaceChildren(...calculation.dutyBreakdown.map((line) =>
+    tableRow([
+      line.name,
+      line.quantity,
+      line.rateSource,
+      line.normal ? money(line.normal) : "",
+      line.special ? money(line.special) : line.net ? `${money(line.net)} net` : ""
+    ])
+  ));
 
   const rows = [];
   for (const line of calculation.earnings) {
@@ -524,6 +545,10 @@ function renderPaymentCalculation() {
   }
   $("#payment-calculation-body").replaceChildren(...rows);
   updateEstimatedPayable();
+}
+
+function formatNumber(value) {
+  return new Intl.NumberFormat("en-NL", { maximumFractionDigits: 2 }).format(Number(value || 0));
 }
 
 function paymentLineRow(label, normal, special, className = "") {
