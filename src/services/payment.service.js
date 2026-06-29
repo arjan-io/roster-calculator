@@ -2,7 +2,8 @@ import { db, transaction } from "../db/connection.js";
 
 export function listPaymentPeriods() {
   const periods = db.prepare(`
-    SELECT id, effective_date AS effectiveDate, basic_salary AS basicSalary
+    SELECT id, effective_date AS effectiveDate, basic_salary AS basicSalary,
+           normal_tax_rate AS normalTaxRate, special_tax_rate AS specialTaxRate
     FROM payment_periods ORDER BY effective_date DESC
   `).all();
   const components = db.prepare(`
@@ -18,23 +19,32 @@ export function listPaymentPeriods() {
   }));
 }
 
-export function savePaymentPeriod({ id, effectiveDate, basicSalary, components = [] }) {
+export function savePaymentPeriod({
+  id, effectiveDate, basicSalary, normalTaxRate, specialTaxRate, components = []
+}) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(effectiveDate || ""))) {
     throw new Error("Select a valid effective date.");
   }
   const salary = Number(basicSalary);
   if (!Number.isFinite(salary) || salary < 0) throw new Error("Enter a valid basic salary.");
+  const normalRate = percentage(normalTaxRate, 43.31, "Enter a valid normal tax rate.");
+  const specialRate = percentage(specialTaxRate, 49.5, "Enter a valid special tax rate.");
 
   return transaction(() => {
     let periodId = Number(id);
     if (periodId) {
-      db.prepare("UPDATE payment_periods SET effective_date = ?, basic_salary = ? WHERE id = ?")
-        .run(effectiveDate, salary, periodId);
+      db.prepare(`
+        UPDATE payment_periods
+        SET effective_date = ?, basic_salary = ?, normal_tax_rate = ?, special_tax_rate = ?
+        WHERE id = ?
+      `).run(effectiveDate, salary, normalRate, specialRate, periodId);
       db.prepare("DELETE FROM payment_components WHERE payment_period_id = ?").run(periodId);
     } else {
       const result = db.prepare(
-        "INSERT INTO payment_periods (effective_date, basic_salary) VALUES (?, ?)"
-      ).run(effectiveDate, salary);
+        `INSERT INTO payment_periods (
+          effective_date, basic_salary, normal_tax_rate, special_tax_rate
+        ) VALUES (?, ?, ?, ?)`
+      ).run(effectiveDate, salary, normalRate, specialRate);
       periodId = Number(result.lastInsertRowid);
     }
 
@@ -61,9 +71,13 @@ export function savePaymentPeriod({ id, effectiveDate, basicSalary, components =
 
 export function paymentPeriodDefaults() {
   const latest = listPaymentPeriods()[0];
-  if (!latest) return { basicSalary: 0, components: [] };
+  if (!latest) {
+    return { basicSalary: 0, normalTaxRate: 43.31, specialTaxRate: 49.5, components: [] };
+  }
   return {
     basicSalary: latest.basicSalary,
+    normalTaxRate: latest.normalTaxRate,
+    specialTaxRate: latest.specialTaxRate,
     components: latest.components.map(({ code, name, calculationType, ratio, amount, paymentTreatment }) => ({
       code, name, calculationType, ratio, amount, paymentTreatment
     }))
@@ -167,7 +181,8 @@ export function deleteDeduction(id) {
 export function calculatePaymentPreview(paymentMonth) {
   validateMonth(paymentMonth, "Select a valid payment month.");
   const period = db.prepare(`
-    SELECT id, effective_date AS effectiveDate, basic_salary AS basicSalary
+    SELECT id, effective_date AS effectiveDate, basic_salary AS basicSalary,
+           normal_tax_rate AS normalTaxRate, special_tax_rate AS specialTaxRate
     FROM payment_periods
     WHERE effective_date <= ?
     ORDER BY effective_date DESC
@@ -331,6 +346,11 @@ export function calculatePaymentPreview(paymentMonth) {
   const special = earnings.reduce((total, line) => total + Number(line.special || 0), 0);
   const grossDeductionTotal = grossDeductions.reduce((total, line) => total + line.amount, 0);
   const netAdjustmentTotal = netAdjustments.reduce((total, line) => total + line.amount, 0);
+  const taxableNormal = normal + grossDeductionTotal;
+  const taxableSpecial = special;
+  const normalTax = Math.max(taxableNormal, 0) * Number(period.normalTaxRate) / 100;
+  const specialTax = Math.max(taxableSpecial, 0) * Number(period.specialTaxRate) / 100;
+  const taxTotal = normalTax + specialTax;
 
   return {
     paymentMonth,
@@ -345,9 +365,15 @@ export function calculatePaymentPreview(paymentMonth) {
       normal,
       special,
       gross: normal + special,
-      taxableBasis: normal + special + grossDeductionTotal,
+      taxableNormal,
+      taxableSpecial,
+      taxableBasis: taxableNormal + taxableSpecial,
+      normalTax,
+      specialTax,
+      taxTotal,
       grossDeductions: grossDeductionTotal,
-      netAdjustments: netAdjustmentTotal
+      netAdjustments: netAdjustmentTotal,
+      payable: taxableNormal + taxableSpecial - taxTotal + netAdjustmentTotal
     }
   };
 }
@@ -404,6 +430,12 @@ function requiredNumber(value, message) {
     throw new Error(message);
   }
   return number;
+}
+
+function percentage(value, fallback, message) {
+  const parsed = value === "" || value === null || value === undefined ? fallback : Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) throw new Error(message);
+  return parsed;
 }
 
 function normalizePaymentTreatment(value, code) {
