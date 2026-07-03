@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Roster Calculator</title>
-    <link rel="stylesheet" href="/styles.css?v=20260629-5">
+    <link rel="stylesheet" href="/styles.css?v=20260703-1">
   </head>
   <body>
     <header class="app-header">
@@ -226,12 +226,85 @@
           <span>Estimated payable</span><strong id="estimated-payable">-</strong>
         </div>
       </section>
-      <section class="page" data-page="statistics"><div class="empty-view"><h2>Statistics</h2><p>Flight, route, time and distance statistics will be built here.</p></div></section>
+      <section class="page" data-page="statistics">
+        <div class="page-title statistics-title">
+          <div><h2>Statistics</h2><p>Flight history, patterns, routes and pay-related activity.</p></div>
+          <div class="sub-nav">
+            <button class="active" data-panel-button="statistics-overview" type="button">Overview</button>
+            <button data-panel-button="statistics-period" type="button">Period</button>
+            <button data-panel-button="statistics-routes" type="button">Routes</button>
+            <button data-panel-button="statistics-pay" type="button">Pay</button>
+          </div>
+        </div>
+        <form id="statistics-filter-form" class="statistics-filter">
+          <label>Year<select id="statistics-year" name="year"><option value="">All years</option></select></label>
+          <label>Month<select id="statistics-month" name="month">
+            <option value="">Full year</option>
+            <option value="1">January</option><option value="2">February</option>
+            <option value="3">March</option><option value="4">April</option>
+            <option value="5">May</option><option value="6">June</option>
+            <option value="7">July</option><option value="8">August</option>
+            <option value="9">September</option><option value="10">October</option>
+            <option value="11">November</option><option value="12">December</option>
+          </select></label>
+          <span id="statistics-status" class="status">All recorded activity</span>
+        </form>
+
+        <section class="panel active" data-panel="statistics-overview">
+          <section id="statistics-summary" class="summary-grid statistics-summary"></section>
+          <div class="statistics-columns">
+            <section class="statistics-section">
+              <div class="section-heading"><h3>Working days</h3><p>Flight and misc-duty dates by weekday.</p></div>
+              <div class="table-wrap"><table><thead><tr><th>Day</th><th>Working days</th></tr></thead><tbody id="statistics-weekdays-body"></tbody></table></div>
+            </section>
+            <section class="statistics-section">
+              <div class="section-heading"><h3>Sectors per flight day</h3><p>Comparable to the sector distribution in Excel.</p></div>
+              <div class="table-wrap"><table><thead><tr><th>Sectors</th><th>Days</th><th>Share</th></tr></thead><tbody id="statistics-sector-days-body"></tbody></table></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="panel" data-panel="statistics-period">
+          <div class="section-heading"><h3>Activity by period</h3><p id="statistics-period-note">Year totals across the full history.</p></div>
+          <div class="table-wrap"><table><thead><tr><th>Period</th><th>Flights</th><th>Hours</th><th>Distance</th><th>Misc duties</th><th>Working days</th></tr></thead><tbody id="statistics-period-body"></tbody></table></div>
+        </section>
+
+        <section class="panel" data-panel="statistics-routes">
+          <div class="statistics-columns">
+            <section class="statistics-section">
+              <div class="section-heading"><h3>Most flown routes</h3><p>Both directions count as the same route.</p></div>
+              <div class="table-wrap"><table><thead><tr><th>Route</th><th>Flights</th><th>Hours</th></tr></thead><tbody id="statistics-routes-body"></tbody></table></div>
+            </section>
+            <section class="statistics-section">
+              <div class="section-heading"><h3>Top destinations</h3><p>Return flights into the base active on that date are excluded.</p></div>
+              <div class="table-wrap"><table><thead><tr><th>Destination</th><th>Visits</th></tr></thead><tbody id="statistics-destinations-body"></tbody></table></div>
+            </section>
+          </div>
+          <section class="statistics-section base-stations-section">
+            <div class="section-heading"><h3>Base history</h3><p id="base-station-status" class="status">An open end date means the base is still active.</p></div>
+            <form id="base-station-form" class="data-form compact-form">
+              <input name="id" type="hidden">
+              <label>IATA<input name="iata" maxlength="3" pattern="[A-Za-z]{3}" required></label>
+              <label>Start date<input name="startDate" type="date" required></label>
+              <label>End date<input name="endDate" type="date"></label>
+              <button type="submit">Save base period</button>
+              <button class="secondary hidden" type="button" data-cancel="base-station">Cancel</button>
+            </form>
+            <div class="table-wrap"><table><thead><tr><th>Base</th><th>Start</th><th>End</th><th class="actions" colspan="2">Actions</th></tr></thead><tbody id="base-stations-body"></tbody></table></div>
+          </section>
+        </section>
+
+        <section class="panel" data-panel="statistics-pay">
+          <div id="statistics-pay-summary" class="summary-grid statistics-summary"></div>
+          <div class="section-heading"><h3>Misc duty payment tracking</h3><p>Logged duties and how many have been confirmed on a payslip.</p></div>
+          <div class="table-wrap"><table><thead><tr><th>Duty</th><th>Tax band</th><th>Included in pay</th><th>Logged</th><th>Confirmed paid</th></tr></thead><tbody id="statistics-pay-duties-body"></tbody></table></div>
+        </section>
+      </section>
       <section class="page" data-page="issues">
         <div class="page-title"><div><h2>Issues</h2><p>Missing data that prevents complete calculations.</p></div></div>
         <div id="issues-list" class="issues-list"></div>
       </section>
     </main>
-    <script src="/app.js?v=20260629-5" type="module"></script>
+    <script src="/app.js?v=20260703-1" type="module"></script>
   </body>
 </html>
