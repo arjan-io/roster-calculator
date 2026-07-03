@@ -338,6 +338,49 @@ tr.duplicate td { color: #9a3412; background: var(--warning-bg); }
 .payment-result span { color: var(--muted); font-size: 13px; }
 .payment-result strong { font-size: 22px; }
 
+.statistics-title { margin-bottom: 12px; }
+.statistics-filter {
+  justify-content: flex-end;
+  align-items: end;
+  gap: 10px;
+  margin-bottom: 22px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.statistics-filter label {
+  display: grid;
+  gap: 5px;
+  min-width: 150px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.statistics-filter .status { margin: 0 0 10px 8px; min-width: 170px; }
+.statistics-summary { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.statistics-summary strong { font-size: 19px; }
+.statistics-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  margin-top: 24px;
+}
+.statistics-section { min-width: 0; }
+.statistics-section .section-heading { margin-bottom: 8px; }
+.statistics-section table { min-width: 100%; }
+.statistics-section th:not(:first-child),
+.statistics-section td:not(:first-child),
+[data-panel="statistics-period"] th:not(:first-child),
+[data-panel="statistics-period"] td:not(:first-child),
+[data-panel="statistics-pay"] th:not(:first-child),
+[data-panel="statistics-pay"] td:not(:first-child) { text-align: right; }
+.base-stations-section {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.compact-form { margin-bottom: 14px; }
+.compact-form label { min-width: 150px; }
+
 .issues-list { display: grid; gap: 8px; }
 .issue-row {
   display: grid;
@@ -361,12 +404,18 @@ tr.duplicate td { color: #9a3412; background: var(--warning-bg); }
   .data-form .wide { grid-column: 1 / -1; }
   .component-editor { flex-direction: column; }
   .component-column { width: 100%; flex-basis: auto; }
+  .statistics-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .statistics-columns { grid-template-columns: 1fr; }
+  .statistics-filter { justify-content: flex-start; flex-wrap: wrap; }
 }
 @media (max-width: 600px) {
   .summary-grid, .data-form, .payment-form { grid-template-columns: 1fr; }
   .data-form .wide { grid-column: auto; }
   .issue-row { grid-template-columns: 1fr; }
   .payment-context, .payment-result { align-items: stretch; flex-direction: column; }
+  .statistics-summary { grid-template-columns: 1fr 1fr; }
+  .statistics-filter { align-items: stretch; flex-direction: column; }
+  .statistics-filter .status { margin: 0; }
 }
 
 .tax-deduction td { color: var(--danger); }
