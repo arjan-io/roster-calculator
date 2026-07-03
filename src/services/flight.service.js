@@ -1,12 +1,15 @@
 import { db, transaction } from "../db/connection.js";
 import { canonicalAirportCode } from "../utils/airportCodes.js";
 
-export function listFlights({ limit = 100, issue, airport } = {}) {
+export function listFlights({ limit = 100, issue, airport, date } = {}) {
   const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 1000);
   let where = "";
   const parameters = [];
 
-  if (issue === "blank_airport") {
+  if (date && /^\d{4}-\d{2}-\d{2}$/.test(String(date))) {
+    where = "WHERE flight_date = ?";
+    parameters.push(String(date));
+  } else if (issue === "blank_airport") {
     where = "WHERE trim(COALESCE(departure_airport, '')) = '' OR trim(COALESCE(arrival_airport, '')) = ''";
   } else if (issue === "missing_airport" && airport) {
     where = "WHERE departure_airport = ? OR arrival_airport = ?";
