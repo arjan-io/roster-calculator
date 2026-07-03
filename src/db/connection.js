@@ -25,11 +25,20 @@ db.exec(`
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS base_stations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    iata TEXT NOT NULL CHECK (length(iata) = 3),
+    start_date TEXT NOT NULL,
+    end_date TEXT,
+    UNIQUE (iata, start_date)
+  );
 `);
 
 migrateFlightIdentity();
 migratePaymentData();
 migrateTaxRates();
+migrateStatisticsData();
 
 function migrateFlightIdentity() {
   if (!tableExists("flights")) return;
@@ -243,6 +252,27 @@ function migrateTaxRates() {
     VALUES ('tax_rate_version', '1')
     ON CONFLICT(key) DO UPDATE SET value = excluded.value
   `).run();
+}
+
+function migrateStatisticsData() {
+  const version = db.prepare(
+    "SELECT value FROM app_meta WHERE key = 'statistics_data_version'"
+  ).get()?.value;
+  if (version === "1") return;
+
+  db.transaction(() => {
+    const insert = db.prepare(`
+      INSERT OR IGNORE INTO base_stations (iata, start_date, end_date) VALUES (?, ?, ?)
+    `);
+    insert.run("LGW", "2011-06-01", "2014-03-06");
+    insert.run("MXP", "2014-03-07", "2016-12-15");
+    insert.run("LGW", "2016-12-16", "2018-04-05");
+    insert.run("AMS", "2018-04-06", null);
+    db.prepare(`
+      INSERT INTO app_meta (key, value) VALUES ('statistics_data_version', '1')
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `).run();
+  })();
 }
 
 function previousMonth(value) {
