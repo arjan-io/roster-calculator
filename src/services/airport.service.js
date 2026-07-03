@@ -69,24 +69,25 @@ export function saveAirport({ id, code, iata, icao, name, lidoCoordinate }) {
   return findAirport(iataCode);
 }
 
-export function deleteAirport(id) {
-  const used = db.prepare(`
-    SELECT COUNT(*) AS count
-    FROM flights
-    WHERE departure_airport = (SELECT COALESCE(iata, code) FROM airports WHERE id = ?)
-       OR arrival_airport = (SELECT COALESCE(iata, code) FROM airports WHERE id = ?)
-  `).get(Number(id), Number(id));
+export const deleteAirport = transaction((id) => {
+  const airport = db.prepare(`
+    SELECT id, COALESCE(iata, code) AS iata FROM airports WHERE id = ?
+  `).get(Number(id));
+  if (!airport) throw new Error("Airport not found.");
 
-  if (used.count) {
-    throw new Error(`This airport is used by ${used.count} flights and cannot be deleted.`);
-  }
+  const affectedFlights = db.prepare(`
+    SELECT COUNT(*) AS count FROM flights
+    WHERE departure_airport = ? OR arrival_airport = ?
+  `).get(airport.iata, airport.iata).count;
 
-  const result = db.prepare("DELETE FROM airports WHERE id = ?").run(Number(id));
-  if (!result.changes) {
-    throw new Error("Airport not found.");
-  }
-  return { deleted: true };
-}
+  db.prepare(`
+    UPDATE flights SET distance_nm = NULL
+    WHERE departure_airport = ? OR arrival_airport = ?
+  `).run(airport.iata, airport.iata);
+  db.prepare("DELETE FROM airports WHERE id = ?").run(airport.id);
+
+  return { deleted: true, iata: airport.iata, affectedFlights };
+});
 
 export function findAirport(code) {
   const airportCode = canonicalAirportCode(code);
