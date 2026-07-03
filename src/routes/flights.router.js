@@ -7,7 +7,8 @@ router.get("/", (req, res) => {
   res.json(listFlights({
     limit: req.query.limit,
     issue: req.query.issue,
-    airport: req.query.airport
+    airport: req.query.airport,
+    date: req.query.date
   }));
 });
 
