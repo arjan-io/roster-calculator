@@ -152,6 +152,14 @@ CREATE TABLE IF NOT EXISTS leave_entries (
   notes TEXT
 );
 
+CREATE TABLE IF NOT EXISTS base_stations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  iata TEXT NOT NULL CHECK (length(iata) = 3),
+  start_date TEXT NOT NULL,
+  end_date TEXT,
+  UNIQUE (iata, start_date)
+);
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_airports_iata_unique
   ON airports (iata) WHERE iata IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_airports_icao_unique
@@ -166,3 +174,5 @@ CREATE INDEX IF NOT EXISTS idx_payment_periods_date
   ON payment_periods (effective_date);
 CREATE INDEX IF NOT EXISTS idx_deductions_months
   ON deductions (start_month, end_month);
+CREATE INDEX IF NOT EXISTS idx_base_stations_dates
+  ON base_stations (start_date, end_date);
