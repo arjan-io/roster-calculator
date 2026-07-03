@@ -74,6 +74,15 @@ $("#one-offs-body").addEventListener("click", handleOneOffAction);
 $("#duty-types-body").addEventListener("click", handleDutyTypeAction);
 $("#deductions-body").addEventListener("click", handleDeductionAction);
 $("#base-stations-body").addEventListener("click", handleBaseStationAction);
+$("#statistics-sector-days-body").addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-flight-date]");
+  if (!button) return;
+  const date = button.dataset.flightDate;
+  activeFlightFilter = { date, label: date };
+  showPage("roster");
+  showPanel($("[data-page='roster']"), "flights");
+  await loadFlights(activeFlightFilter);
+});
 $("#component-editor").addEventListener("click", (event) => {
   if (event.target.closest("[data-remove-component]")) {
     event.target.closest(".component-column").remove();
@@ -401,6 +410,7 @@ async function loadFlights(filter = null) {
   const parameters = new URLSearchParams({ limit: filter ? "1000" : "50" });
   if (filter?.flightFilter) parameters.set("issue", filter.flightFilter);
   if (filter?.airport) parameters.set("airport", filter.airport);
+  if (filter?.date) parameters.set("date", filter.date);
   const flights = await api(`/api/flights?${parameters}`);
 
   $("#flights-heading").textContent = filter ? `Affected flights: ${filter.label}` : "Recent flights";
@@ -548,12 +558,7 @@ function renderStatistics() {
   renderWeekdayChart(data.weekdays);
   const sectorDays = data.sectorsPerDay.reduce((total, row) => total + row.days, 0);
   $("#statistics-sector-days-body").replaceChildren(...data.sectorsPerDay.map((row) =>
-    tableRow([
-      row.sectors,
-      row.days,
-      sectorDays ? `${formatNumber(row.days / sectorDays * 100)}%` : "-",
-      row.datesToCheck
-    ])
+    sectorDayRow(row, sectorDays)
   ));
   renderSectorPie(data.sectorsPerDay);
 
@@ -606,6 +611,27 @@ function renderSummary(container, items) {
     item.append(caption, strong);
     return item;
   }));
+}
+
+function sectorDayRow(row, totalDays) {
+  const tr = tableRow([
+    row.sectors,
+    row.days,
+    totalDays ? `${formatNumber(row.days / totalDays * 100)}%` : "-"
+  ]);
+  const dates = document.createElement("td");
+  const values = String(row.datesToCheck || "").split(", ").filter(Boolean);
+  values.forEach((date, index) => {
+    if (index) dates.append(document.createTextNode(", "));
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "text-action date-filter-button";
+    button.dataset.flightDate = date;
+    button.textContent = date;
+    dates.append(button);
+  });
+  tr.append(dates);
+  return tr;
 }
 
 function renderWeekdayChart(rows) {
