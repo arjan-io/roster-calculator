@@ -113,14 +113,24 @@ export function getAirportDistance(fromCode, toCode) {
   };
 }
 
-export function recalculateFlightDistances() {
+export function recalculateFlightDistances({ importBatchId = null, onlyMissing = false } = {}) {
+  const conditions = [];
+  const parameters = [];
+  if (importBatchId !== null) {
+    conditions.push("f.import_batch_id = ?");
+    parameters.push(importBatchId);
+  }
+  if (onlyMissing) conditions.push("f.distance_nm IS NULL");
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+
   const flights = db.prepare(`
     SELECT f.id, dep.latitude AS dep_lat, dep.longitude AS dep_lon,
            arr.latitude AS arr_lat, arr.longitude AS arr_lon
     FROM flights f
     LEFT JOIN airports dep ON COALESCE(dep.iata, dep.code) = f.departure_airport
     LEFT JOIN airports arr ON COALESCE(arr.iata, arr.code) = f.arrival_airport
-  `).all();
+    ${where}
+  `).all(...parameters);
   const update = db.prepare("UPDATE flights SET distance_nm = ? WHERE id = ?");
 
   for (const flight of flights) {
