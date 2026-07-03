@@ -641,8 +641,11 @@ function sectorDayRow(row, totalDays) {
 
 function renderWeekdayChart(rows) {
   const container = $("#statistics-weekday-chart");
-  const maximum = Math.max(...rows.map((row) => row.count), 1);
-  container.replaceChildren(...rows.map((row) => {
+  const weekdayOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const byDay = new Map(rows.map((row) => [row.label, row]));
+  const orderedRows = weekdayOrder.map((label) => byDay.get(label) || { label, count: 0 });
+  const maximum = Math.max(...orderedRows.map((row) => row.count), 1);
+  container.replaceChildren(...orderedRows.map((row) => {
     const item = document.createElement("div");
     item.className = "bar-chart-row";
     const label = document.createElement("span");
@@ -651,7 +654,7 @@ function renderWeekdayChart(rows) {
     track.className = "bar-chart-track";
     const bar = document.createElement("div");
     bar.className = "bar-chart-value";
-    bar.style.width = `${row.count / maximum * 100}%`;
+    bar.style.height = `${row.count / maximum * 100}%`;
     const value = document.createElement("strong");
     value.textContent = row.count;
     track.append(bar);
@@ -661,13 +664,18 @@ function renderWeekdayChart(rows) {
 }
 
 function renderSectorPie(rows) {
-  const colors = ["#08766c", "#2f6fa3", "#d59b28", "#b75d45", "#76558f", "#697786"];
+  const colors = ["#08766c", "#d99b21", "#326da8", "#c5523b", "#76558f", "#4f5964", "#6f8f3d"];
   const total = rows.reduce((sum, row) => sum + row.days, 0);
   let position = 0;
-  const stops = rows.map((row, index) => {
+  const stops = rows.flatMap((row, index) => {
     const start = position;
     position += total ? row.days / total * 100 : 0;
-    return `${colors[index % colors.length]} ${start}% ${position}%`;
+    const gap = Math.min(0.3, (position - start) / 6);
+    return [
+      `#ffffff ${start}% ${start + gap}%`,
+      `${colors[index % colors.length]} ${start + gap}% ${position - gap}%`,
+      `#ffffff ${position - gap}% ${position}%`
+    ];
   });
   const pie = $("#statistics-sector-pie");
   pie.style.background = stops.length ? `conic-gradient(${stops.join(", ")})` : "var(--line)";
