@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Roster Calculator</title>
-    <link rel="stylesheet" href="/styles.css?v=20260703-1">
+    <link rel="stylesheet" href="/styles.css?v=20260703-2">
   </head>
   <body>
     <header class="app-header">
@@ -255,11 +255,16 @@
           <div class="statistics-columns">
             <section class="statistics-section">
               <div class="section-heading"><h3>Working days</h3><p>Flight and misc-duty dates by weekday.</p></div>
+              <div id="statistics-weekday-chart" class="bar-chart" aria-label="Working days by weekday"></div>
               <div class="table-wrap"><table><thead><tr><th>Day</th><th>Working days</th></tr></thead><tbody id="statistics-weekdays-body"></tbody></table></div>
             </section>
             <section class="statistics-section">
-              <div class="section-heading"><h3>Sectors per flight day</h3><p>Comparable to the sector distribution in Excel.</p></div>
-              <div class="table-wrap"><table><thead><tr><th>Sectors</th><th>Days</th><th>Share</th></tr></thead><tbody id="statistics-sector-days-body"></tbody></table></div>
+              <div class="section-heading"><h3>Flights per day</h3><p>Each flight leg counts as one sector.</p></div>
+              <div class="pie-layout">
+                <div id="statistics-sector-pie" class="pie-chart" role="img" aria-label="Flights per day distribution"></div>
+                <div id="statistics-sector-legend" class="chart-legend"></div>
+              </div>
+              <div class="table-wrap"><table><thead><tr><th>Flights</th><th>Days</th><th>Share</th><th>Dates to check</th></tr></thead><tbody id="statistics-sector-days-body"></tbody></table></div>
             </section>
           </div>
         </section>
@@ -305,6 +310,6 @@
         <div id="issues-list" class="issues-list"></div>
       </section>
     </main>
-    <script src="/app.js?v=20260703-1" type="module"></script>
+    <script src="/app.js?v=20260703-2" type="module"></script>
   </body>
 </html>
