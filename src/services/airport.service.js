@@ -84,6 +84,7 @@ export const deleteAirport = transaction((id) => {
     UPDATE flights SET distance_nm = NULL
     WHERE departure_airport = ? OR arrival_airport = ?
   `).run(airport.iata, airport.iata);
+  db.prepare("DELETE FROM airport_aliases WHERE airport_id = ?").run(airport.id);
   db.prepare("DELETE FROM airports WHERE id = ?").run(airport.id);
 
   return { deleted: true, iata: airport.iata, affectedFlights };
