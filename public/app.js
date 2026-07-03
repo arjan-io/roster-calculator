@@ -7,7 +7,7 @@ let oneOffPayments = [];
 let deductions = [];
 let paymentCalculation = null;
 let dutyFilter = "all";
-let activeFlightFilter = null;
+let activeFlightFilter = restoreFlightDateFilter();
 let statistics = null;
 let baseStations = [];
 
@@ -37,6 +37,7 @@ $("#next-payment-month").addEventListener("click", () => movePaymentMonth(1));
 $("#add-component").addEventListener("click", () => addComponentColumn());
 $("#clear-flight-filter").addEventListener("click", async () => {
   activeFlightFilter = null;
+  sessionStorage.removeItem("flightDateFilter");
   await loadFlights();
 });
 $("#paid-toggle").addEventListener("click", () => {
@@ -79,6 +80,7 @@ $("#statistics-sector-days-body").addEventListener("click", async (event) => {
   if (!button) return;
   const date = button.dataset.flightDate;
   activeFlightFilter = { date, label: date };
+  sessionStorage.setItem("flightDateFilter", date);
   showPage("roster");
   showPanel($("[data-page='roster']"), "flights");
   await loadFlights(activeFlightFilter);
@@ -273,7 +275,7 @@ async function handleFlightAction(event) {
   if (!confirm("Delete this flight and keep it excluded from future imports?")) return;
 
   await api(`/api/flights/${button.dataset.id}`, { method: "DELETE" });
-  await Promise.all([loadDashboard(), loadIssues()]);
+  await Promise.all([loadDashboard(), loadIssues(), loadStatistics()]);
 }
 
 async function handleBaseStationAction(event) {
@@ -1062,6 +1064,11 @@ function money(value) {
 }
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[char]);
+}
+
+function restoreFlightDateFilter() {
+  const date = sessionStorage.getItem("flightDateFilter");
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(date || "")) ? { date, label: date } : null;
 }
 
 const initialPage = location.hash.slice(1);
