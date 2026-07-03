@@ -1,6 +1,7 @@
 import { db, transaction } from "../db/connection.js";
 import { isImportableFlightDate } from "../config/importRules.js";
 import { canonicalAirportCode } from "../utils/airportCodes.js";
+import { recalculateFlightDistances } from "./airport.service.js";
 
 const insertBatch = db.prepare(`
   INSERT INTO import_batches (
@@ -175,6 +176,8 @@ export const commitImport = transaction(({ sourceFormat, originalFileName, fligh
     SET inserted_count = ?, duplicate_count = ?
     WHERE id = ?
   `).run(insertedCount, duplicateCount, batch.lastInsertRowid);
+
+  recalculateFlightDistances({ importBatchId: batch.lastInsertRowid });
 
   return {
     importBatchId: batch.lastInsertRowid,
