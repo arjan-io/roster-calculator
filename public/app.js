@@ -545,10 +545,17 @@ function renderStatistics() {
   $("#statistics-weekdays-body").replaceChildren(...data.weekdays.map((row) =>
     tableRow([row.label, row.count])
   ));
+  renderWeekdayChart(data.weekdays);
   const sectorDays = data.sectorsPerDay.reduce((total, row) => total + row.days, 0);
   $("#statistics-sector-days-body").replaceChildren(...data.sectorsPerDay.map((row) =>
-    tableRow([row.sectors, row.days, sectorDays ? `${formatNumber(row.days / sectorDays * 100)}%` : "-"])
+    tableRow([
+      row.sectors,
+      row.days,
+      sectorDays ? `${formatNumber(row.days / sectorDays * 100)}%` : "-",
+      row.datesToCheck
+    ])
   ));
+  renderSectorPie(data.sectorsPerDay);
 
   $("#statistics-period-note").textContent = data.filter.year
     ? `Monthly totals for ${data.filter.year}.`
@@ -597,6 +604,52 @@ function renderSummary(container, items) {
     caption.textContent = label;
     strong.textContent = value;
     item.append(caption, strong);
+    return item;
+  }));
+}
+
+function renderWeekdayChart(rows) {
+  const container = $("#statistics-weekday-chart");
+  const maximum = Math.max(...rows.map((row) => row.count), 1);
+  container.replaceChildren(...rows.map((row) => {
+    const item = document.createElement("div");
+    item.className = "bar-chart-row";
+    const label = document.createElement("span");
+    label.textContent = row.label.slice(0, 3);
+    const track = document.createElement("div");
+    track.className = "bar-chart-track";
+    const bar = document.createElement("div");
+    bar.className = "bar-chart-value";
+    bar.style.width = `${row.count / maximum * 100}%`;
+    const value = document.createElement("strong");
+    value.textContent = row.count;
+    track.append(bar);
+    item.append(label, track, value);
+    return item;
+  }));
+}
+
+function renderSectorPie(rows) {
+  const colors = ["#08766c", "#2f6fa3", "#d59b28", "#b75d45", "#76558f", "#697786"];
+  const total = rows.reduce((sum, row) => sum + row.days, 0);
+  let position = 0;
+  const stops = rows.map((row, index) => {
+    const start = position;
+    position += total ? row.days / total * 100 : 0;
+    return `${colors[index % colors.length]} ${start}% ${position}%`;
+  });
+  const pie = $("#statistics-sector-pie");
+  pie.style.background = stops.length ? `conic-gradient(${stops.join(", ")})` : "var(--line)";
+  pie.setAttribute("aria-label", rows.map((row) => `${row.sectors} flights: ${row.days} days`).join(", "));
+
+  $("#statistics-sector-legend").replaceChildren(...rows.map((row, index) => {
+    const item = document.createElement("div");
+    const swatch = document.createElement("span");
+    swatch.className = "legend-swatch";
+    swatch.style.background = colors[index % colors.length];
+    const label = document.createElement("span");
+    label.textContent = `${row.sectors} flight${row.sectors === 1 ? "" : "s"}: ${row.days} day${row.days === 1 ? "" : "s"}`;
+    item.append(swatch, label);
     return item;
   }));
 }
