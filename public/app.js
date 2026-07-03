@@ -306,8 +306,11 @@ async function handleAirportAction(event) {
   }
   if (button.dataset.action === "delete" && confirm(`Delete ${airport.iata}?`)) {
     try {
-      await api(`/api/airports/${airport.id}`, { method: "DELETE" });
-      await Promise.all([loadAirports(), loadIssues()]);
+      const result = await api(`/api/airports/${airport.id}`, { method: "DELETE" });
+      $("#airport-status").textContent = result.affectedFlights
+        ? `${result.iata} deleted. ${result.affectedFlights} flight${result.affectedFlights === 1 ? "" : "s"} added to Issues.`
+        : `${result.iata} deleted.`;
+      await Promise.all([loadAirports(), loadIssues(), loadStatistics()]);
     } catch (error) {
       $("#airport-status").textContent = error.message;
     }
