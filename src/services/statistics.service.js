@@ -135,13 +135,19 @@ function getWeekdays(filter) {
 function getSectorsPerDay(filter) {
   const flight = flightWhere(filter, "flight_date");
   return db.prepare(`
-    SELECT sectors, COUNT(*) AS days FROM (
+    SELECT sectors, COUNT(*) AS days,
+           CASE WHEN sectors > 5 THEN GROUP_CONCAT(flight_date, ', ') ELSE NULL END AS datesToCheck
+    FROM (
       SELECT flight_date, COUNT(*) AS sectors
       FROM flights ${flight.sql}
       GROUP BY flight_date
     )
     GROUP BY sectors ORDER BY sectors
-  `).all(...flight.params).map((row) => ({ sectors: Number(row.sectors), days: Number(row.days) }));
+  `).all(...flight.params).map((row) => ({
+    sectors: Number(row.sectors),
+    days: Number(row.days),
+    datesToCheck: row.datesToCheck || ""
+  }));
 }
 
 function getRoutes(filter) {
