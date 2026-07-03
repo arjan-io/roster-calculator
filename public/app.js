@@ -8,6 +8,8 @@ let deductions = [];
 let paymentCalculation = null;
 let dutyFilter = "all";
 let activeFlightFilter = null;
+let statistics = null;
+let baseStations = [];
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -27,6 +29,8 @@ $("#payment-period-form").addEventListener("submit", savePaymentPeriod);
 $("#one-off-form").addEventListener("submit", saveOneOffPayment);
 $("#duty-type-form").addEventListener("submit", saveDutyType);
 $("#deduction-form").addEventListener("submit", saveDeduction);
+$("#base-station-form").addEventListener("submit", saveBaseStation);
+$("#statistics-filter-form").addEventListener("change", loadStatistics);
 $("#payment-calculation-form").addEventListener("submit", calculatePayment);
 $("#previous-payment-month").addEventListener("click", () => movePaymentMonth(-1));
 $("#next-payment-month").addEventListener("click", () => movePaymentMonth(1));
@@ -56,6 +60,7 @@ $("[data-cancel='payment']").addEventListener("click", resetPaymentForm);
 $("[data-cancel='one-off']").addEventListener("click", resetOneOffForm);
 $("[data-cancel='duty-type']").addEventListener("click", resetDutyTypeForm);
 $("[data-cancel='deduction']").addEventListener("click", resetDeductionForm);
+$("[data-cancel='base-station']").addEventListener("click", resetBaseStationForm);
 
 $("#airport-form [name='lidoCoordinate']").addEventListener("blur", (event) => {
   event.target.value = formatCoordinate(event.target.value);
@@ -68,6 +73,7 @@ $("#payment-periods-body").addEventListener("click", handlePaymentAction);
 $("#one-offs-body").addEventListener("click", handleOneOffAction);
 $("#duty-types-body").addEventListener("click", handleDutyTypeAction);
 $("#deductions-body").addEventListener("click", handleDeductionAction);
+$("#base-stations-body").addEventListener("click", handleBaseStationAction);
 $("#component-editor").addEventListener("click", (event) => {
   if (event.target.closest("[data-remove-component]")) {
     event.target.closest(".component-column").remove();
@@ -238,6 +244,20 @@ async function saveDeduction(event) {
   }
 }
 
+async function saveBaseStation(event) {
+  event.preventDefault();
+  const payload = Object.fromEntries(new FormData(event.target));
+  const url = payload.id ? `/api/statistics/base-stations/${payload.id}` : "/api/statistics/base-stations";
+  try {
+    await api(url, { method: payload.id ? "PUT" : "POST", body: JSON.stringify(payload) });
+    $("#base-station-status").textContent = "Base period saved.";
+    resetBaseStationForm();
+    await Promise.all([loadBaseStations(), loadStatistics()]);
+  } catch (error) {
+    $("#base-station-status").textContent = error.message;
+  }
+}
+
 async function handleFlightAction(event) {
   const button = event.target.closest("[data-action='delete-flight']");
   if (!button) return;
@@ -245,6 +265,20 @@ async function handleFlightAction(event) {
 
   await api(`/api/flights/${button.dataset.id}`, { method: "DELETE" });
   await Promise.all([loadDashboard(), loadIssues()]);
+}
+
+async function handleBaseStationAction(event) {
+  const button = event.target.closest("[data-action]");
+  if (!button) return;
+  const base = baseStations.find((item) => item.id === Number(button.dataset.id));
+  if (button.dataset.action === "edit") {
+    fillForm($("#base-station-form"), base);
+    $("[data-cancel='base-station']").classList.remove("hidden");
+  }
+  if (button.dataset.action === "delete" && confirm(`Delete the ${base.iata} base period?`)) {
+    await api(`/api/statistics/base-stations/${base.id}`, { method: "DELETE" });
+    await Promise.all([loadBaseStations(), loadStatistics()]);
+  }
 }
 
 async function handleAirportAction(event) {
@@ -454,6 +488,117 @@ async function loadDeductions() {
     item.calculationType === "normal_percentage" ? "% of Normaal" : "Fixed",
     item.calculationType === "normal_percentage" ? `${item.amount}%` : money(item.amount)
   ], item.id)));
+}
+
+async function loadStatistics() {
+  const year = $("#statistics-year").value;
+  const monthInput = $("#statistics-month");
+  monthInput.disabled = !year;
+  if (!year) monthInput.value = "";
+  const month = monthInput.value;
+  const query = new URLSearchParams();
+  if (year) query.set("year", year);
+  if (month) query.set("month", month);
+
+  const queryString = query.toString();
+  statistics = await api(`/api/statistics${queryString ? `?${queryString}` : ""}`);
+  populateStatisticsYears(statistics.availableYears, year);
+  renderStatistics();
+}
+
+async function loadBaseStations() {
+  baseStations = await api("/api/statistics/base-stations");
+  $("#base-stations-body").replaceChildren(...baseStations.map((base) => actionRow([
+    base.iata,
+    base.startDate,
+    base.endDate || "Ongoing"
+  ], base.id)));
+}
+
+function populateStatisticsYears(years, selected) {
+  const select = $("#statistics-year");
+  select.replaceChildren(
+    new Option("All years", ""),
+    ...years.map((year) => new Option(String(year), String(year)))
+  );
+  select.value = selected;
+}
+
+function renderStatistics() {
+  const data = statistics;
+  const selectedMonth = $("#statistics-month option:checked")?.textContent;
+  const periodLabel = data.filter.year
+    ? `${selectedMonth && data.filter.month ? `${selectedMonth} ` : ""}${data.filter.year}`
+    : "All recorded activity";
+  $("#statistics-status").textContent = periodLabel;
+
+  const overview = data.overview;
+  renderSummary($("#statistics-summary"), [
+    ["Flights", formatNumber(overview.flights)],
+    ["Flight time", minutesToDuration(overview.flightMinutes)],
+    ["Distance", `${formatNumber(overview.distanceNm)} nm`],
+    ["Airports", formatNumber(overview.airports)],
+    ["Working days", formatNumber(overview.workingDays)],
+    ["Avg. sectors / flight day", formatNumber(overview.averageSectorsPerFlightDay)]
+  ]);
+
+  $("#statistics-weekdays-body").replaceChildren(...data.weekdays.map((row) =>
+    tableRow([row.label, row.count])
+  ));
+  const sectorDays = data.sectorsPerDay.reduce((total, row) => total + row.days, 0);
+  $("#statistics-sector-days-body").replaceChildren(...data.sectorsPerDay.map((row) =>
+    tableRow([row.sectors, row.days, sectorDays ? `${formatNumber(row.days / sectorDays * 100)}%` : "-"])
+  ));
+
+  $("#statistics-period-note").textContent = data.filter.year
+    ? `Monthly totals for ${data.filter.year}.`
+    : "Year totals across the full history.";
+  $("#statistics-period-body").replaceChildren(...data.periods.map((row) => tableRow([
+    row.period,
+    row.flights,
+    minutesToDuration(row.flightMinutes),
+    `${formatNumber(row.distanceNm)} nm`,
+    row.miscDuties,
+    row.workingDays
+  ])));
+
+  $("#statistics-routes-body").replaceChildren(...data.routes.map((row) => tableRow([
+    row.route,
+    row.flights,
+    minutesToDuration(row.flightMinutes)
+  ])));
+  $("#statistics-destinations-body").replaceChildren(...data.destinations.map((row) => tableRow([
+    row.name ? `${row.airport} - ${row.name}` : row.airport,
+    row.visits
+  ])));
+
+  const sectors = data.pay.sectors;
+  renderSummary($("#statistics-pay-summary"), [
+    ["Short sectors", sectors.short],
+    ["Medium sectors", sectors.medium],
+    ["Long sectors", sectors.long],
+    ["Extra-long sectors", sectors.extraLong],
+    ["Distance unavailable", sectors.unknown]
+  ]);
+  $("#statistics-pay-duties-body").replaceChildren(...data.pay.duties.map((row) => tableRow([
+    row.name,
+    taxTreatmentLabel(row.taxTreatment),
+    row.includedInPay ? "Yes" : "No",
+    row.logged,
+    row.confirmedPaid
+  ])));
+}
+
+function renderSummary(container, items) {
+  container.replaceChildren(...items.map(([label, value]) => {
+    const item = document.createElement("div");
+    const caption = document.createElement("span");
+    const strong = document.createElement("strong");
+    caption.textContent = label;
+    strong.textContent = value;
+    item.append(caption, strong);
+    return item;
+  }));
 }
 
 async function loadIssues() {
@@ -727,6 +872,11 @@ function resetDeductionForm() {
   $("#deduction-form [name='id']").value = "";
   $("[data-cancel='deduction']").classList.add("hidden");
 }
+function resetBaseStationForm() {
+  $("#base-station-form").reset();
+  $("#base-station-form [name='id']").value = "";
+  $("[data-cancel='base-station']").classList.add("hidden");
+}
 
 function resetAirportForm() {
   $("#airport-form").reset();
@@ -852,6 +1002,8 @@ async function loadAll() {
     loadPaymentPeriods(),
     loadOneOffPayments(),
     loadDeductions(),
+    loadStatistics(),
+    loadBaseStations(),
     loadIssues()
   ]);
 }
