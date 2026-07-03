@@ -7,6 +7,7 @@ import airportsRouter from "./routes/airports.router.js";
 import dutiesRouter from "./routes/duties.router.js";
 import paymentsRouter from "./routes/payments.router.js";
 import issuesRouter from "./routes/issues.router.js";
+import statisticsRouter from "./routes/statistics.router.js";
 import { recalculateFlightDistances } from "./services/airport.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -25,6 +26,7 @@ app.use("/api/airports", airportsRouter);
 app.use("/api/duties", dutiesRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/issues", issuesRouter);
+app.use("/api/statistics", statisticsRouter);
 
 app.get("/", (_req, res) => {
   res.sendFile(path.join(__dirname, "../public/index.html"));
