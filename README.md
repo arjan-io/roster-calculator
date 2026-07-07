@@ -49,12 +49,12 @@ docker compose up -d --build
 Then open:
 
 ```text
-http://SERVER_IP:3001
+http://SERVER_IP:8081
 ```
 
 The SQLite database is stored in `./data`, which is mounted into the container. Keep that folder backed up and on persistent storage.
 
-Docker exposes this app on host port `3001` by default so it can run alongside LOHC Flows if that project uses `3000`. Change `ROSTER_PORT` in `.env` if needed.
+Docker exposes this app on host port `8081` by default so it can run alongside LOHC Flows on `8080`. Change `ROSTER_PORT` in `.env` if needed.
 
 For Oracle Cloud notes, including firewall and backup steps, see `ORACLE_CLOUD.md`.
 

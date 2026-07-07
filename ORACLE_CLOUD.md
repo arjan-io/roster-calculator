@@ -6,8 +6,8 @@ This app can run on an Oracle Cloud VM with Docker Compose. SQLite is still used
 
 - Use an Ampere ARM or regular AMD VM shape.
 - Install Docker and Docker Compose.
-- Open TCP port `3001` in the Oracle Cloud security list or network security group.
-- Open TCP port `3001` in the VM firewall if it is enabled.
+- Open TCP port `8081` in the Oracle Cloud security list or network security group.
+- Open TCP port `8081` in the VM firewall if it is enabled.
 - Keep the repository folder on persistent block storage if you later attach a separate volume.
 
 ## Deploy
@@ -22,15 +22,15 @@ docker compose up -d --build
 Then open:
 
 ```text
-http://YOUR_SERVER_IP:3001
+http://YOUR_SERVER_IP:8081
 ```
 
-The Docker setup exposes Roster Calculator on host port `3001` by default. That leaves port `3000` available for LOHC Flows or another Node app.
+The Docker setup exposes Roster Calculator on host port `8081` by default. That leaves port `8080` available for LOHC Flows.
 
 To choose a different host port, create or edit `.env` next to `docker-compose.yml`:
 
 ```bash
-ROSTER_PORT=3002
+ROSTER_PORT=8082
 ```
 
 ## Update

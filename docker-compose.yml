@@ -4,7 +4,7 @@ services:
     container_name: roster-calculator
     restart: unless-stopped
     ports:
-      - "${ROSTER_PORT:-3001}:3000"
+      - "${ROSTER_PORT:-8081}:3000"
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0
