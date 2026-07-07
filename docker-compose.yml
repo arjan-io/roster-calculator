@@ -1,0 +1,15 @@
+services:
+  roster-calculator:
+    build: .
+    container_name: roster-calculator
+    restart: unless-stopped
+    ports:
+      - "${ROSTER_PORT:-3001}:3000"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      DATABASE_PATH: /app/data/roster-calculator.sqlite
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
