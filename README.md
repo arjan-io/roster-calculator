@@ -37,6 +37,27 @@ Then open:
 http://localhost:3000
 ```
 
+## Docker / Oracle Cloud
+
+The app can run in Docker on a Raspberry Pi, Oracle Cloud VM, or any normal Linux server.
+
+```bash
+mkdir -p data uploads
+docker compose up -d --build
+```
+
+Then open:
+
+```text
+http://SERVER_IP:3001
+```
+
+The SQLite database is stored in `./data`, which is mounted into the container. Keep that folder backed up and on persistent storage.
+
+Docker exposes this app on host port `3001` by default so it can run alongside LOHC Flows if that project uses `3000`. Change `ROSTER_PORT` in `.env` if needed.
+
+For Oracle Cloud notes, including firewall and backup steps, see `ORACLE_CLOUD.md`.
+
 ## Import Design
 
 The importer uses:
