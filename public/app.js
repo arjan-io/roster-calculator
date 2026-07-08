@@ -34,7 +34,7 @@ $("#statistics-filter-form").addEventListener("change", loadStatistics);
 $("#payment-calculation-form").addEventListener("submit", calculatePayment);
 $("#previous-payment-month").addEventListener("click", () => movePaymentMonth(-1));
 $("#next-payment-month").addEventListener("click", () => movePaymentMonth(1));
-$("#add-component").addEventListener("click", () => addComponentColumn());
+$("#add-component").addEventListener("click", () => addComponentColumn({}, { focus: true }));
 $("#clear-flight-filter").addEventListener("click", async () => {
   activeFlightFilter = null;
   sessionStorage.removeItem("flightDateFilter");
@@ -905,7 +905,7 @@ function renderComponentEditor(components = []) {
   for (const component of components) addComponentColumn(component);
 }
 
-function addComponentColumn(component = {}) {
+function addComponentColumn(component = {}, options = {}) {
   const row = document.createElement("div");
   row.className = "component-column";
   row.innerHTML = `
@@ -927,6 +927,10 @@ function addComponentColumn(component = {}) {
   `;
   $("#component-editor").append(row);
   updateComponentColumn(row);
+  if (options.focus) {
+    row.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "end" });
+    $("[name='componentName']", row).focus();
+  }
 }
 
 function updateComponentColumn(column) {
