@@ -72,6 +72,8 @@ The container still listens on `0.0.0.0:3000` internally. In Docker Compose the 
 http://roster:3000/
 ```
 
+Nginx must be on the same Docker network as this service for the `roster` hostname to resolve. If Nginx runs in a separate Compose project, attach both projects to the same external Docker network.
+
 No base path setting is needed for a dedicated subdomain. Static files use root paths such as `/app.js` and `/styles.css`, and API calls use `/api/...`, which work correctly from `pay.arjanhes.nl`.
 
 Recommended Nginx location:
