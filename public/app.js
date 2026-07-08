@@ -86,8 +86,13 @@ $("#statistics-sector-days-body").addEventListener("click", async (event) => {
   await loadFlights(activeFlightFilter);
 });
 $("#component-editor").addEventListener("click", (event) => {
-  if (event.target.closest("[data-remove-component]")) {
-    event.target.closest(".component-column").remove();
+  const removeButton = event.target.closest("[data-remove-component]");
+  if (!removeButton) return;
+
+  const column = removeButton.closest(".component-column");
+  const componentName = $("[name='componentName']", column).value.trim() || "this component";
+  if (confirm(`Remove ${componentName} from this payment period?`)) {
+    column.remove();
   }
 });
 $("#component-editor").addEventListener("change", (event) => {
