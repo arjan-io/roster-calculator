@@ -1,7 +1,7 @@
 services:
-  roster-calculator:
+  roster:
     build: .
-    container_name: roster-calculator
+    container_name: roster
     restart: unless-stopped
     ports:
       - "${ROSTER_PORT:-8081}:3000"
