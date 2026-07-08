@@ -15,15 +15,10 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
-const host = process.env.HOST || "0.0.0.0";
 
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(express.static(path.join(__dirname, "../public")));
-
-app.get("/api/health", (_req, res) => {
-  res.json({ ok: true });
-});
 
 app.use("/api/imports", importsRouter);
 app.use("/api/flights", flightsRouter);
@@ -39,6 +34,6 @@ app.get("/", (_req, res) => {
 
 recalculateFlightDistances({ onlyMissing: true });
 
-app.listen(port, host, () => {
-  console.log(`Roster Calculator running at http://${host}:${port}`);
+app.listen(port, () => {
+  console.log(`Roster Calculator running at http://localhost:${port}`);
 });

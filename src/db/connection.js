@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 const dataDir = path.join(__dirname, "../../data");
 const databasePath = process.env.DATABASE_PATH || path.join(dataDir, "roster-calculator.sqlite");
 
-fs.mkdirSync(path.dirname(databasePath), { recursive: true });
+fs.mkdirSync(dataDir, { recursive: true });
 
 export const db = new Database(databasePath);
 db.pragma("journal_mode = WAL");
