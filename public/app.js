@@ -757,6 +757,8 @@ function renderPaymentCalculation() {
     "Estimate for checking expected payslip items, including calculated tax deductions.";
   $("#calculation-roster-month").textContent = calculation.rosterMonth;
   $("#calculation-rate-date").textContent = calculation.paymentPeriod.effectiveDate;
+  $("#calculation-roster-rate-date").textContent =
+    calculation.rosterPaymentPeriod.effectiveDate;
 
   $("#sector-breakdown-body").replaceChildren(...calculation.sectorBreakdown.map((line) =>
     tableRow([

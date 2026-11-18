@@ -180,24 +180,14 @@ export function deleteDeduction(id) {
 
 export function calculatePaymentPreview(paymentMonth) {
   validateMonth(paymentMonth, "Select a valid payment month.");
-  const period = db.prepare(`
-    SELECT id, effective_date AS effectiveDate, basic_salary AS basicSalary,
-           normal_tax_rate AS normalTaxRate, special_tax_rate AS specialTaxRate
-    FROM payment_periods
-    WHERE effective_date <= ?
-    ORDER BY effective_date DESC
-    LIMIT 1
-  `).get(`${paymentMonth}-31`);
-  if (!period) throw new Error("No payment details apply to this month.");
-
-  const components = db.prepare(`
-    SELECT code, name, calculation_type AS calculationType, ratio, amount,
-           payment_treatment AS paymentTreatment
-    FROM payment_components
-    WHERE payment_period_id = ?
-  `).all(period.id);
-  const componentMap = new Map(components.map((component) => [component.code, component]));
   const rosterMonth = previousPaymentMonth(paymentMonth);
+  const period = paymentPeriodForMonth(paymentMonth);
+  if (!period) throw new Error("No payment details apply to this month.");
+  const rosterPeriod = paymentPeriodForMonth(rosterMonth);
+  if (!rosterPeriod) throw new Error("No payment details apply to the roster month.");
+
+  const componentMap = paymentComponentMap(period.id);
+  const rosterComponentMap = paymentComponentMap(rosterPeriod.id);
   const earnings = [];
   const grossDeductions = [];
   const netAdjustments = [];
@@ -223,8 +213,8 @@ export function calculatePaymentPreview(paymentMonth) {
     }
   }
 
-  const sectorRate = componentMap.get("sector");
-  const sectorRateValue = componentValue(sectorRate, period.basicSalary);
+  const sectorRate = rosterComponentMap.get("sector");
+  const sectorRateValue = componentValue(sectorRate, rosterPeriod.basicSalary);
   const sectorCounts = db.prepare(`
     SELECT
       SUM(CASE WHEN distance_nm <= 399 THEN 1 ELSE 0 END) AS shortCount,
@@ -276,7 +266,7 @@ export function calculatePaymentPreview(paymentMonth) {
       rateSource = `${duty.sectorValue} sector units`;
     } else if (duty.isPaid && duty.paymentComponentCode) {
       unitAmount =
-        componentValue(componentMap.get(duty.paymentComponentCode), period.basicSalary) *
+        componentValue(rosterComponentMap.get(duty.paymentComponentCode), rosterPeriod.basicSalary) *
         Number(duty.paymentMultiplier || 1);
       rateSource = duty.paymentMultiplier && duty.paymentMultiplier !== 1
         ? `${duty.paymentComponentCode} x ${duty.paymentMultiplier}`
@@ -356,6 +346,7 @@ export function calculatePaymentPreview(paymentMonth) {
     paymentMonth,
     rosterMonth,
     paymentPeriod: period,
+    rosterPaymentPeriod: rosterPeriod,
     sectorBreakdown,
     dutyBreakdown,
     earnings,
@@ -376,6 +367,27 @@ export function calculatePaymentPreview(paymentMonth) {
       payable: taxableNormal + taxableSpecial - taxTotal + netAdjustmentTotal
     }
   };
+}
+
+function paymentPeriodForMonth(month) {
+  return db.prepare(`
+    SELECT id, effective_date AS effectiveDate, basic_salary AS basicSalary,
+           normal_tax_rate AS normalTaxRate, special_tax_rate AS specialTaxRate
+    FROM payment_periods
+    WHERE effective_date <= ?
+    ORDER BY effective_date DESC
+    LIMIT 1
+  `).get(`${month}-31`);
+}
+
+function paymentComponentMap(paymentPeriodId) {
+  const components = db.prepare(`
+    SELECT code, name, calculation_type AS calculationType, ratio, amount,
+           payment_treatment AS paymentTreatment
+    FROM payment_components
+    WHERE payment_period_id = ?
+  `).all(paymentPeriodId);
+  return new Map(components.map((component) => [component.code, component]));
 }
 
 function sectorBreakdownRow(label, count, weight, sectorRate) {
